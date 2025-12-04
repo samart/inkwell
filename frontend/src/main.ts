@@ -4,6 +4,7 @@ import { api, DirectoryEntry, RecentLocation } from './api';
 import { ws, FileEvent } from './websocket';
 import { FileTree } from './filetree';
 import { MarkdownEditor } from './editor';
+import { MermaidRenderer } from './mermaid-renderer';
 import './styles/main.css';
 
 interface Tab {
@@ -15,6 +16,7 @@ interface Tab {
 class InkwellApp {
   private fileTree: FileTree | null = null;
   private editor: MarkdownEditor | null = null;
+  private mermaidRenderer: MermaidRenderer | null = null;
   private tabs: Tab[] = [];
   private activeTab: string | null = null;
   private editors: Map<string, string> = new Map();
@@ -91,6 +93,10 @@ class InkwellApp {
     });
 
     await this.editor.init();
+
+    // Initialize Mermaid diagram renderer
+    this.mermaidRenderer = new MermaidRenderer(this.elements.editorEl);
+    this.mermaidRenderer.start();
 
     // Connect WebSocket
     ws.connect();
