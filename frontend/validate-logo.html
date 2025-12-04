@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo SVG Validation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a1520;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #00d9ff;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: #0d1a26;
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #1a3a4a;
+        }
+
+        .panel h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #00ff88;
+            font-size: 18px;
+        }
+
+        .image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 600px;
+            background: linear-gradient(135deg, #0a1f2e 0%, #081419 100%);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .notes {
+            margin-top: 30px;
+            padding: 20px;
+            background: #1a2532;
+            border-radius: 8px;
+            border-left: 4px solid #00ff88;
+        }
+
+        .notes h3 {
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+
+        .notes ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .overlay-container {
+            position: relative;
+            width: 1024px;
+            height: 857px;
+            margin: 0 auto;
+            border: 2px solid #00ff88;
+            transform: scale(0.5);
+            /* Scale down for viewing */
+            transform-origin: top center;
+        }
+
+        .overlay-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay-reference {
+            opacity: 0.5;
+            z-index: 2;
+            mix-blend-mode: screen;
+        }
+
+        .overlay-svg {
+            z-index: 1;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        input[type="range"] {
+            width: 300px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>SVG Logo Validation</h1>
+
+    <div class="controls">
+        <label>Reference Opacity: <span id="opacityVal">50%</span></label>
+        <br>
+        <input type="range" min="0" max="100" value="50" id="opacitySlider">
+    </div>
+
+    <div class="overlay-container">
+        <!-- SVG is the base -->
+        <img src="/logo-exact.svg" class="overlay-svg" alt="SVG Logo">
+        <!-- Reference is overlay -->
+        <img src="/reference-logo.png" class="overlay-reference" id="refImg" alt="Reference Logo">
+    </div>
+
+    <script>
+        const slider = document.getElementById('opacitySlider');
+        const refImg = document.getElementById('refImg');
+        const valDisplay = document.getElementById('opacityVal');
+
+        slider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            refImg.style.opacity = val / 100;
+            valDisplay.textContent = val + '%';
+        });
+    </script>
+
+    <div class="comparison">
+        <div class="panel">
+            <h2>Reference Image</h2>
+            <div class="image-container">
+                <img src="/reference-logo.png" alt="Reference Logo">
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Created SVG</h2>
+            <div class="image-container">
+                <img src="/logo-exact.svg" alt="SVG Logo" style="width: 400px; height: 600px;">
+            </div>
+        </div>
+    </div>
+
+    <div class="notes">
+        <h3>Validation Checklist:</h3>
+        <ul>
+            <li><strong>Nib Shape:</strong> Fountain pen style with sharp shoulders and pentagonal body</li>
+            <li><strong>Nib Details:</strong> Center slit from tip to breather hole, circular breather hole</li>
+            <li><strong>Nib Split:</strong> Left side bright cyan/blue, right side dark/black</li>
+            <li><strong>Band:</strong> Rectangular with rounded corners, neon green outline, vertical separators</li>
+            <li><strong>Circuits:</strong> 4 paths with specific routing and circular nodes at endpoints</li>
+            <li><strong>Leaf:</strong> Pixelated grid pattern, scattered edges, diagonal stem line</li>
+            <li><strong>Glow Effect:</strong> Neon glow on all cyan and green elements</li>
+        </ul>
+    </div>
+</body>
+
+</html>

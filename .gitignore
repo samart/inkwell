@@ -1,0 +1,22 @@
+# Build output
+build/
+tmp/
+
+# Dependencies
+node_modules/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Python analysis scripts (temporary)
+*.py
+Screenshot*.png
+
+# Demo files
+demo/
+myfile*.md

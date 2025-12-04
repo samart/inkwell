@@ -1,0 +1,38 @@
+:root {
+    --bg-primary: #FAFAF9;
+    --bg-sidebar: #F5F5F4;
+    --bg-hover: rgba(0, 0, 0, 0.04);
+    --bg-input: #FFFFFF;
+
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --text-tertiary: #A8A29E;
+
+    --border: #E7E5E4;
+
+    --accent: #16A34A;
+    --accent-hover: #15803D;
+    --accent-light: rgba(22, 163, 74, 0.12);
+
+    --selection: rgba(22, 163, 74, 0.15);
+
+    --scrollbar: rgba(0, 0, 0, 0.12);
+    --scrollbar-hover: rgba(0, 0, 0, 0.2);
+
+    /* Editor specific */
+    --editor-heading: #0F172A;
+    --editor-link: #2563EB;
+    --editor-code-bg: #F1F5F9;
+    --editor-code-text: #475569;
+    --editor-blockquote-border: #D4D4D8;
+    --editor-blockquote-text: #71717A;
+    --editor-hr: #E4E4E7;
+}
+
+body {
+    color-scheme: light;
+}
+
+[data-theme="light"] {
+    color-scheme: light;
+}

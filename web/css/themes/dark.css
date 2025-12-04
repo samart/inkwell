@@ -1,0 +1,38 @@
+:root {
+    --bg-primary: #18181B;
+    --bg-sidebar: #121214;
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-input: #27272A;
+
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-tertiary: #71717A;
+
+    --border: #2E2E33;
+
+    --accent: #4ADE80;
+    --accent-hover: #22C55E;
+    --accent-light: rgba(74, 222, 128, 0.12);
+
+    --selection: rgba(74, 222, 128, 0.2);
+
+    --scrollbar: rgba(255, 255, 255, 0.1);
+    --scrollbar-hover: rgba(255, 255, 255, 0.18);
+
+    /* Editor specific */
+    --editor-heading: #FFFFFF;
+    --editor-link: #60A5FA;
+    --editor-code-bg: #27272A;
+    --editor-code-text: #E4E4E7;
+    --editor-blockquote-border: #3F3F46;
+    --editor-blockquote-text: #A1A1AA;
+    --editor-hr: #3F3F46;
+}
+
+body {
+    color-scheme: dark;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+}
