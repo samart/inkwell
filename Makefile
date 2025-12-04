@@ -58,8 +58,8 @@ run: build
 ## run-demo: Run with a demo directory
 run-demo: build
 	@mkdir -p demo
-	@echo "# Welcome to Inkwell\n\nA beautiful markdown editor.\n\n## Features\n\n- WYSIWYG editing\n- Drag & drop images\n- Dark/light themes" > demo/welcome.md
-	@echo "# Notes\n\nYour notes here..." > demo/notes.md
+	@test -f demo/welcome.md || echo "# Welcome to Inkwell\n\nA beautiful markdown editor.\n\n## Features\n\n- WYSIWYG editing\n- Drag & drop images\n- Dark/light themes" > demo/welcome.md
+	@test -f demo/notes.md || echo "# Notes\n\nYour notes here..." > demo/notes.md
 	./$(BUILD_DIR)/$(BINARY_NAME) demo
 
 ## dev: Run in development mode with auto-reload (requires air)

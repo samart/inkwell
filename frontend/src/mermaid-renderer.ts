@@ -193,25 +193,51 @@ export class MermaidRenderer {
   }
 
   private extractCode(wrapper: HTMLElement): string {
-    // Try to get code from CodeMirror
-    const cmContent = wrapper.querySelector('.cm-content');
+    // Debug: log the wrapper structure
+    console.log('[Mermaid] Extracting code from wrapper:', wrapper.className, wrapper.outerHTML.substring(0, 500));
+
+    // Try to get code from CodeMirror - each line is in a .cm-line element
+    const cmLines = wrapper.querySelectorAll('.cm-line');
+    console.log('[Mermaid] Found .cm-line elements:', cmLines.length);
+    if (cmLines.length > 0) {
+      const lines: string[] = [];
+      cmLines.forEach(line => {
+        lines.push(line.textContent || '');
+      });
+      const result = lines.join('\n');
+      console.log('[Mermaid] Extracted from .cm-line:', result);
+      return result;
+    }
+
+    // Try .cm-content - look for it both as child and in the wrapper itself
+    const cmContent = wrapper.querySelector('.cm-content') ||
+                      (wrapper.classList.contains('cm-content') ? wrapper : null);
     if (cmContent) {
-      return cmContent.textContent || '';
+      // Get all child nodes and reconstruct text with newlines
+      const result = (cmContent as HTMLElement).innerText || cmContent.textContent || '';
+      console.log('[Mermaid] Extracted from .cm-content:', result);
+      return result;
     }
 
     // Try code element
     const codeEl = wrapper.querySelector('code');
     if (codeEl) {
-      return codeEl.textContent || '';
+      const result = codeEl.innerText || codeEl.textContent || '';
+      console.log('[Mermaid] Extracted from code element:', result);
+      return result;
     }
 
     // Try pre element
     const preEl = wrapper.querySelector('pre');
     if (preEl) {
-      return preEl.textContent || '';
+      const result = preEl.innerText || preEl.textContent || '';
+      console.log('[Mermaid] Extracted from pre element:', result);
+      return result;
     }
 
-    return wrapper.textContent || '';
+    const result = (wrapper as HTMLElement).innerText || wrapper.textContent || '';
+    console.log('[Mermaid] Extracted from wrapper directly:', result);
+    return result;
   }
 
   private async renderDiagram(block: MermaidBlock): Promise<void> {
