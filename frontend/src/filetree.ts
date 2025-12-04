@@ -28,6 +28,8 @@ export class FileTree {
   private metadataCache: Map<string, FileMetadata> = new Map();
   private outline: OutlineHeading[] = [];
   private outlineExpanded = true;
+  private collapsedSiblings: boolean = true; // Auto-collapse siblings when file is active
+  private expandedSiblingGroups: Set<string> = new Set(); // Track which sibling groups are expanded
 
   constructor(container: HTMLElement, options: FileTreeOptions = {}) {
     this.container = container;
@@ -69,6 +71,10 @@ export class FileTree {
   }
 
   setActiveFile(path: string | null): void {
+    // Reset expanded siblings when switching to a new file
+    if (path !== this.activeFile) {
+      this.expandedSiblingGroups.clear();
+    }
     this.activeFile = path;
     this.render();
   }
@@ -90,7 +96,185 @@ export class FileTree {
     }
 
     this.container.innerHTML = '';
-    this.renderNode(filtered, 0);
+    this.renderNodeWithCollapse(filtered, 0, null);
+  }
+
+  // Get the parent directory path from a file path
+  private getParentPath(path: string): string {
+    const parts = path.split('/');
+    parts.pop();
+    return parts.join('/') || '';
+  }
+
+  // Render a group of sibling nodes with potential collapsing
+  private renderNodeWithCollapse(node: FileNode, depth: number, _parentPath: string | null): void {
+    // Skip root node itself, just render children with collapse logic
+    if (depth === 0 && node.isDir) {
+      this.renderChildrenWithCollapse(node.children || [], depth, node.path);
+      return;
+    }
+
+    this.renderSingleNode(node, depth);
+
+    // Render outline for active file
+    if (!node.isDir && this.activeFile === node.path && this.outline.length > 0) {
+      this.renderOutline(depth);
+    }
+
+    if (node.isDir && this.expandedDirs.has(node.path) && node.children) {
+      this.renderChildrenWithCollapse(node.children, depth + 1, node.path);
+    }
+  }
+
+  // Render children with smart collapse behavior
+  private renderChildrenWithCollapse(children: FileNode[], depth: number, parentPath: string): void {
+    if (!this.activeFile || !this.collapsedSiblings || this.searchQuery) {
+      // No collapse when no active file, collapse disabled, or searching
+      children.forEach(child => this.renderNodeWithCollapse(child, depth, parentPath));
+      return;
+    }
+
+    const activeParent = this.getParentPath(this.activeFile);
+    const isActiveParent = activeParent === parentPath || (parentPath === '' && !activeParent.includes('/'));
+
+    if (!isActiveParent) {
+      // Not the parent of active file, render normally
+      children.forEach(child => this.renderNodeWithCollapse(child, depth, parentPath));
+      return;
+    }
+
+    // This directory contains the active file - apply collapse logic
+    const groupKey = parentPath || 'root';
+    const isExpanded = this.expandedSiblingGroups.has(groupKey);
+
+    // Separate active file, files before it, and files after it
+    const activeIndex = children.findIndex(c => c.path === this.activeFile);
+
+    if (activeIndex === -1) {
+      // Active file not directly in this list, render normally
+      children.forEach(child => this.renderNodeWithCollapse(child, depth, parentPath));
+      return;
+    }
+
+    // Get siblings before and after
+    const beforeActive = children.slice(0, activeIndex);
+    const activeNode = children[activeIndex];
+    const afterActive = children.slice(activeIndex + 1);
+
+    // Render "show more" pill for files before (if any and collapsed)
+    if (beforeActive.length > 0 && !isExpanded) {
+      this.renderCollapsedPill(beforeActive, depth, groupKey, 'before');
+    } else {
+      beforeActive.forEach(child => this.renderNodeWithCollapse(child, depth, parentPath));
+    }
+
+    // Always render the active file
+    this.renderNodeWithCollapse(activeNode, depth, parentPath);
+
+    // Render "show more" pill for files after (if any and collapsed)
+    if (afterActive.length > 0 && !isExpanded) {
+      this.renderCollapsedPill(afterActive, depth, groupKey, 'after');
+    } else {
+      afterActive.forEach(child => this.renderNodeWithCollapse(child, depth, parentPath));
+    }
+  }
+
+  // Render an elegant collapsed pill showing hidden files
+  private renderCollapsedPill(hiddenNodes: FileNode[], depth: number, groupKey: string, position: 'before' | 'after'): void {
+    const pill = document.createElement('div');
+    pill.className = 'sibling-collapse-pill';
+    pill.dataset.depth = String(depth);
+    pill.dataset.position = position;
+
+    const count = hiddenNodes.length;
+    const fileText = count === 1 ? 'file' : 'files';
+
+    pill.innerHTML = `
+      <span class="collapse-pill-dots">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </span>
+      <span class="collapse-pill-text">${count} more ${fileText}</span>
+    `;
+
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.expandedSiblingGroups.add(groupKey);
+      this.render();
+    });
+
+    this.container.appendChild(pill);
+  }
+
+  // Render a single node (extracted from original renderNode)
+  private renderSingleNode(node: FileNode, depth: number): void {
+    const item = document.createElement('div');
+    item.className = 'tree-item';
+    item.dataset.path = node.path;
+    item.dataset.depth = String(depth);
+
+    if (node.isDir) {
+      item.classList.add('directory');
+      if (this.expandedDirs.has(node.path)) {
+        item.classList.add('expanded');
+      }
+    } else {
+      if (this.activeFile === node.path) {
+        item.classList.add('active');
+      }
+    }
+
+    let html = '';
+
+    if (node.isDir) {
+      html += `<svg class="tree-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>`;
+      html += `<svg class="tree-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>`;
+    } else {
+      html += `<svg class="tree-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>`;
+    }
+
+    html += `<span class="tree-name">${this.escapeHtml(node.name)}</span>`;
+    item.innerHTML = html;
+
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (node.isDir) {
+        this.toggleDir(node.path);
+      } else {
+        this.options.onFileSelect?.(node.path);
+      }
+    });
+
+    item.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      if (!node.isDir) {
+        this.options.onFileOpen?.(node.path);
+      }
+    });
+
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.showContextMenu(e, node);
+    });
+
+    // Tooltip on hover
+    item.addEventListener('mouseenter', (e) => {
+      this.showTooltip(e, node);
+    });
+
+    item.addEventListener('mouseleave', () => {
+      this.hideTooltip();
+    });
+
+    this.container.appendChild(item);
   }
 
   private filterTree(node: FileNode): FileNode | null {

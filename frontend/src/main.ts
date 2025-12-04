@@ -18,7 +18,7 @@ class InkwellApp {
   private tabs: Tab[] = [];
   private activeTab: string | null = null;
   private editors: Map<string, string> = new Map();
-  private theme = 'light';
+  private theme: string = 'light';
   private markdownPanelOpen = false;
   private directoryPath = '';
   private recents: RecentLocation[] = [];
@@ -56,6 +56,8 @@ class InkwellApp {
     startupRecents: document.getElementById('startup-recents')!,
     startupBrowse: document.getElementById('startup-browse')!,
     startupContinue: document.getElementById('startup-continue')!,
+    themeSelector: document.getElementById('theme-selector')!,
+    closeThemeSelector: document.getElementById('close-theme-selector')!,
   };
 
   async init(): Promise<void> {
@@ -127,9 +129,33 @@ class InkwellApp {
       this.fileTree?.setSearchQuery(target.value);
     });
 
-    // Theme toggle
+    // Theme toggle - show selector popup
     this.elements.themeToggle.addEventListener('click', () => {
-      this.toggleTheme();
+      this.toggleThemeSelector();
+    });
+
+    // Theme selector close button
+    this.elements.closeThemeSelector.addEventListener('click', () => {
+      this.hideThemeSelector();
+    });
+
+    // Theme card clicks
+    this.elements.themeSelector.querySelectorAll('.theme-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const theme = (card as HTMLElement).dataset.theme!;
+        this.setTheme(theme);
+        this.updateThemeCards();
+      });
+    });
+
+    // Close theme selector when clicking outside
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (!this.elements.themeSelector.classList.contains('hidden') &&
+          !this.elements.themeSelector.contains(target) &&
+          !this.elements.themeToggle.contains(target)) {
+        this.hideThemeSelector();
+      }
     });
 
     // New file button
@@ -383,19 +409,53 @@ class InkwellApp {
     this.fileTree?.refresh();
   }
 
-  private setTheme(theme: 'light' | 'dark'): void {
+  private setTheme(theme: string): void {
     this.theme = theme;
     document.body.dataset.theme = theme;
 
-    if (theme === 'dark') {
+    // Add 'dark' class for any dark theme (for legacy CSS selectors)
+    if (theme.startsWith('dark')) {
       document.body.classList.add('dark');
     } else {
       document.body.classList.remove('dark');
     }
+
+    // Update toggle button title to show current theme
+    const themeNames: Record<string, string> = {
+      'light': 'Light',
+      'light-sepia': 'Sepia',
+      'light-ocean': 'Ocean',
+      'dark': 'Dark',
+      'dark-nord': 'Nord',
+      'dark-monokai': 'Monokai',
+    };
+    this.elements.themeToggle.title = `Theme: ${themeNames[theme] || theme}`;
   }
 
-  private toggleTheme(): void {
-    this.setTheme(this.theme === 'light' ? 'dark' : 'light');
+  // Theme selector methods
+  private toggleThemeSelector(): void {
+    const isHidden = this.elements.themeSelector.classList.contains('hidden');
+    if (isHidden) {
+      this.showThemeSelector();
+    } else {
+      this.hideThemeSelector();
+    }
+  }
+
+  private showThemeSelector(): void {
+    this.elements.themeSelector.classList.remove('hidden');
+    this.updateThemeCards();
+  }
+
+  private hideThemeSelector(): void {
+    this.elements.themeSelector.classList.add('hidden');
+  }
+
+  private updateThemeCards(): void {
+    this.elements.themeSelector.querySelectorAll('.theme-card').forEach(card => {
+      const cardTheme = (card as HTMLElement).dataset.theme;
+      card.classList.toggle('active', cardTheme === this.theme);
+    });
   }
 
   private showNewFileModal(): void {

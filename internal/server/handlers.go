@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -327,14 +328,30 @@ func (s *Server) handleChangeDirectory(w http.ResponseWriter, r *http.Request) {
 	s.config.RootDir = absPath
 	s.fs = filesystem.New(absPath)
 
-	// Restart the watcher for the new directory
-	s.watcher.Close()
+	// Restart the watcher for the new directory (with proper locking)
+	s.watcherMu.Lock()
+	oldWatcher := s.watcher
+	s.watcherMu.Unlock()
+
+	// Close old watcher first (this will close listener channels and terminate old goroutine)
+	if oldWatcher != nil {
+		log.Printf("Closing old watcher (watching %d directories)", oldWatcher.WatchCount())
+		oldWatcher.Close()
+	}
+
+	// Create new watcher
 	newWatcher, err := filesystem.NewWatcher(absPath)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to watch directory: "+err.Error())
 		return
 	}
+
+	// Update the watcher reference
+	s.watcherMu.Lock()
 	s.watcher = newWatcher
+	s.watcherMu.Unlock()
+
+	log.Printf("New watcher created for %s (watching %d directories)", absPath, newWatcher.WatchCount())
 
 	// Start forwarding events from new watcher
 	go s.forwardFileEvents()

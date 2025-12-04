@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"inkwell/internal/config"
@@ -21,6 +22,7 @@ type Server struct {
 	config     *config.Config
 	fs         *filesystem.FileSystem
 	watcher    *filesystem.Watcher
+	watcherMu  sync.RWMutex // Protects watcher during directory changes
 	router     *mux.Router
 	httpServer *http.Server
 	hub        *Hub
@@ -165,8 +167,17 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 // forwardFileEvents forwards file system events to WebSocket clients
 func (s *Server) forwardFileEvents() {
-	events := s.watcher.Subscribe()
+	s.watcherMu.RLock()
+	watcher := s.watcher
+	s.watcherMu.RUnlock()
+
+	if watcher == nil {
+		return
+	}
+
+	events := watcher.Subscribe()
 	for event := range events {
 		s.hub.BroadcastFileEvent(event)
 	}
+	// Channel closed means watcher was closed, goroutine exits naturally
 }
