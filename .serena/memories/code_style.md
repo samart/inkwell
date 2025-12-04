@@ -25,8 +25,8 @@
 ## TypeScript Frontend
 
 ### Naming
-- Classes: PascalCase (e.g., `InkwellApp`, `MarkdownEditor`, `FileTree`)
-- Functions/methods: camelCase (e.g., `openFile`, `handleEditorChange`)
+- Classes: PascalCase (e.g., `InkwellApp`, `MarkdownEditor`, `FileTree`, `MermaidRenderer`)
+- Functions/methods: camelCase (e.g., `openFile`, `handleEditorChange`, `renderDiagrams`)
 - Interfaces: PascalCase (e.g., `FileNode`, `Tab`, `RecentLocation`)
 
 ### File Organization
@@ -35,14 +35,33 @@
 - Entry point in `src/main.ts`
 
 ### CSS
-- CSS custom properties for theming (e.g., `--bg-app`, `--text-main`)
-- Light theme is default, dark theme via `body.dark` class
-- BEM-ish naming for classes (e.g., `.file-tree`, `.file-tree-item`)
+- CSS custom properties for theming (e.g., `--bg-app`, `--text-main`, `--accent-primary`)
+- Light theme is default, dark theme via `body.dark` class or `[data-theme^="dark"]`
+- BEM-ish naming for classes (e.g., `.file-tree`, `.file-tree-item`, `.mermaid-diagram-wrapper`)
 - Use `!important` sparingly, mainly for Milkdown overrides
+- Modern effects: gradients, layered box-shadows, backdrop-filter for glassmorphism
+- Smooth transitions for interactive elements (0.2s-0.3s ease)
 
 ### Imports
 - ES modules (`import`/`export`)
 - Type-only imports when appropriate
+
+## Mermaid Theming Pattern
+
+When configuring Mermaid themes, use the `base` theme with custom `themeVariables`:
+
+```typescript
+mermaid.initialize({
+  theme: 'base',
+  themeVariables: {
+    primaryColor: '#3b82f6',
+    primaryTextColor: '#1e293b',
+    // ... comprehensive color definitions
+  }
+});
+```
+
+This provides granular control over all diagram element colors.
 
 ## General
 
@@ -53,3 +72,8 @@
 - Minimal comments; prefer self-documenting code
 - Go: doc comments on exported symbols
 - TypeScript: JSDoc only when beneficial
+
+### Theme Support
+- Always test UI changes in both light and dark themes
+- Use CSS custom properties for theme-aware colors
+- Mermaid diagrams have separate light/dark theme configurations
