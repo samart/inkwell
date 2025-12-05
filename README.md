@@ -1,8 +1,16 @@
-# Inkwell
+<div align="center">
+  <img src="assets/logo-cropped.png" alt="Inkwell Logo" width="200">
 
-**Write at the Speed of Thought**
+  # Inkwell
 
-A distraction-free markdown editor for coders, writers, and dreamers. Experience the flow of Digital Nature.
+  **Write at the Speed of Thought**
+
+  *A distraction-free markdown editor for coders, writers, and dreamers.*
+
+  *Experience the flow of Digital Nature.*
+
+  ---
+</div>
 
 ## Features
 
