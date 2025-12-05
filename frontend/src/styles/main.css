@@ -584,6 +584,15 @@ body.dark .btn-new {
   color: var(--text-main);
 }
 
+.git-branch.clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.git-branch.clickable:hover {
+  background-color: var(--bg-hover);
+}
+
 .git-branch svg {
   opacity: 0.7;
   flex-shrink: 0;
@@ -2345,7 +2354,7 @@ body.dark .mermaid-diagram-wrapper:hover,
   color: #fecaca;
 }
 
-/* Git Panel Container */
+/* Git Panel Container (in left sidebar) */
 .git-panel-container {
   border-top: 1px solid var(--border-color);
   max-height: 50%;
@@ -2357,6 +2366,29 @@ body.dark .mermaid-diagram-wrapper:hover,
 .git-panel-container:empty {
   display: none;
   border-top: none;
+}
+
+/* Git Panel Right Sidebar */
+#git-panel-container {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  height: 100vh;
+  background: var(--bg-sidebar);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#git-panel-container:empty {
+  display: none;
+}
+
+#git-panel-container.collapsed {
+  width: 0;
+  min-width: 0;
+  border-left: none;
 }
 
 /* Git Panel Styles */
@@ -2382,6 +2414,37 @@ body.dark .mermaid-diagram-wrapper:hover,
   font-size: 12px;
   margin-top: 4px;
   opacity: 0.7;
+}
+
+.git-panel-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.git-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.git-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.git-panel-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .git-panel-tabs {

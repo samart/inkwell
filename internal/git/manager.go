@@ -39,13 +39,22 @@ func (m *Manager) ReposDir() string {
 }
 
 // OpenRepository opens a git repository at the given path
-// Returns nil if the path is not a git repository
+// If the path is inside a git repository but not at its root,
+// it will find and open the repository root.
+// Returns nil if the path is not in a git repository
 func (m *Manager) OpenRepository(path string) (*Repository, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Try to open as a git repo
-	gitRepo, err := git.PlainOpen(path)
+	// First, find the git root (handles subdirectories)
+	gitRoot := FindGitRoot(path)
+	if gitRoot == "" {
+		m.repo = nil
+		return nil, nil // Not in a git repo
+	}
+
+	// Open the repository at the git root
+	gitRepo, err := git.PlainOpen(gitRoot)
 	if err != nil {
 		if err == git.ErrRepositoryNotExists {
 			m.repo = nil
@@ -55,7 +64,7 @@ func (m *Manager) OpenRepository(path string) (*Repository, error) {
 	}
 
 	repo := &Repository{
-		path: path,
+		path: gitRoot,
 		repo: gitRepo,
 	}
 

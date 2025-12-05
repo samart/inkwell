@@ -7,6 +7,7 @@ export class GitStatusComponent {
   private status: GitStatus | null = null;
   private onInitRepo: (() => void) | null = null;
   private onCloneRepo: (() => void) | null = null;
+  private onTogglePanel: (() => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -19,6 +20,10 @@ export class GitStatusComponent {
 
   setOnCloneRepo(callback: () => void): void {
     this.onCloneRepo = callback;
+  }
+
+  setOnTogglePanel(callback: () => void): void {
+    this.onTogglePanel = callback;
   }
 
   async refresh(): Promise<void> {
@@ -98,7 +103,7 @@ export class GitStatusComponent {
     }
 
     this.container.innerHTML = `
-      <div class="git-branch" title="Current branch: ${branch}">
+      <div class="git-branch clickable" title="Click to toggle Git panel">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
           <path d="M15.698 7.287L8.712.302a1.03 1.03 0 00-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 011.55 1.56l1.773 1.774a1.224 1.224 0 11-.733.692L8.52 5.902v4.253a1.225 1.225 0 11-1.008-.036V5.832a1.224 1.224 0 01-.665-1.605L5.02 2.401.302 7.12a1.03 1.03 0 000 1.457l6.986 6.986a1.03 1.03 0 001.457 0l6.953-6.953a1.03 1.03 0 000-1.457"/>
         </svg>
@@ -107,6 +112,14 @@ export class GitStatusComponent {
         ${statusIndicator}
       </div>
     `;
+
+    // Add click handler for toggling panel
+    const branchDiv = this.container.querySelector('.git-branch');
+    branchDiv?.addEventListener('click', () => {
+      if (this.onTogglePanel) {
+        this.onTogglePanel();
+      }
+    });
   }
 
   private async handleInitRepo(): Promise<void> {

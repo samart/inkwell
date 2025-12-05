@@ -12,6 +12,7 @@ export class GitPanel {
   private onStatusChange: ((status: GitStatus | null) => void) | null = null;
   private isPushing: boolean = false;
   private isPulling: boolean = false;
+  private isOpen: boolean = true;
 
   // History state
   private commits: GitCommit[] = [];
@@ -29,15 +30,47 @@ export class GitPanel {
     this.onStatusChange = callback;
   }
 
+  // Panel visibility methods
+  toggle(): void {
+    this.isOpen = !this.isOpen;
+    this.container.classList.toggle('collapsed', !this.isOpen);
+  }
+
+  open(): void {
+    this.isOpen = true;
+    this.container.classList.remove('collapsed');
+  }
+
+  close(): void {
+    this.isOpen = false;
+    this.container.classList.add('collapsed');
+  }
+
+  get panelOpen(): boolean {
+    return this.isOpen;
+  }
+
   async refresh(): Promise<void> {
     try {
       const response = await api.getGitStatus();
       this.isRepo = response.isRepo;
       this.status = response.status || null;
 
+      // Clear cached data when refreshing (e.g., after directory change)
+      this.commits = [];
+      this.selectedCommits = [];
+      this.diffResult = null;
+      this.showDiffViewer = false;
+      this.branches = [];
+
       // Also load branches if we're on the branches tab
       if (this.isRepo && this.currentTab === 'branches') {
         await this.loadBranches();
+      }
+
+      // Also load history if we're on the history tab
+      if (this.isRepo && this.currentTab === 'history') {
+        await this.loadHistory();
       }
 
       this.render();
@@ -118,6 +151,15 @@ export class GitPanel {
     this.container.innerHTML = `
       <div class="git-panel">
         <div class="git-panel-header">
+          <div class="git-panel-header-top">
+            <span class="git-panel-title">Git</span>
+            <button class="git-panel-close" data-action="close-panel" title="Close panel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
           <div class="git-panel-tabs">
             <button class="git-tab ${this.currentTab === 'changes' ? 'active' : ''}" data-tab="changes">
               Changes ${this.getChangesCount()}
@@ -559,6 +601,11 @@ export class GitPanel {
   }
 
   private attachEventListeners(): void {
+    // Close panel button
+    this.container.querySelector('[data-action="close-panel"]')?.addEventListener('click', () => {
+      this.close();
+    });
+
     // Tab switching
     this.container.querySelectorAll('.git-tab').forEach(tab => {
       tab.addEventListener('click', async (e) => {

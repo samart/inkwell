@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            background: #888;
+            padding: 20px;
+        }
+
+        .container {
+            margin-bottom: 20px;
+            border: 1px solid red;
+            display: inline-block;
+        }
+
+        img {
+            max-width: 500px;
+            border: 1px solid blue;
+        }
+
+        .label {
+            background: white;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="label">reference-logo.png</div>
+        <img src="reference-logo.png">
+    </div>
+    <br>
+    <div class="container">
+        <div class="label">logo-dark.png</div>
+        <img src="logo-dark.png">
+    </div>
+    <div class="container">
+        <div class="label">logo-dark-no-text.png</div>
+        <img src="logo-dark-no-text.png">
+    </div>
+    <br>
+    <div class="container">
+        <div class="label">logo-light.png</div>
+        <img src="logo-light.png">
+    </div>
+    <div class="container">
+        <div class="label">logo-light-no-text.png</div>
+        <img src="logo-light-no-text.png">
+    </div>
+    <script>
+        window.onload = function () {
+            const imgs = document.querySelectorAll('img');
+            imgs.forEach(img => {
+                const label = img.previousElementSibling;
+                label.innerHTML += ` (${img.naturalWidth}x${img.naturalHeight})`;
+            });
+        }
+    </script>
+</body>
+
+</html>

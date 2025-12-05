@@ -77,7 +77,7 @@ func New(cfg *config.Config, webContent embed.FS) (*Server, error) {
 		if _, err := s.git.OpenRepository(cfg.RootDir); err != nil {
 			log.Printf("Note: %s is not a git repository", cfg.RootDir)
 		} else if repo := s.git.CurrentRepository(); repo != nil {
-			log.Printf("Git repository detected: %s (branch: %s)", cfg.RootDir, repo.Branch())
+			log.Printf("Git repository detected at root: %s (opened from: %s, branch: %s)", repo.Path(), cfg.RootDir, repo.Branch())
 		}
 	}
 

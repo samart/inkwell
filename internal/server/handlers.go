@@ -361,6 +361,15 @@ func (s *Server) handleChangeDirectory(w http.ResponseWriter, r *http.Request) {
 		s.recents.Add(absPath)
 	}
 
+	// Try to open as git repository
+	if s.git != nil {
+		if _, err := s.git.OpenRepository(absPath); err != nil {
+			log.Printf("Note: %s is not a git repository", absPath)
+		} else if repo := s.git.CurrentRepository(); repo != nil {
+			log.Printf("Git repository detected at root: %s (opened from: %s, branch: %s)", repo.Path(), absPath, repo.Branch())
+		}
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Success: true,
 		Data: map[string]string{

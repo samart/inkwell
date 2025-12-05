@@ -109,6 +109,7 @@ class InkwellApp {
     this.gitStatus = new GitStatusComponent(this.elements.gitStatusContainer);
     this.gitStatus.setOnInitRepo(() => this.handleGitRepoChange());
     this.gitStatus.setOnCloneRepo(() => this.showCloneDialog());
+    this.gitStatus.setOnTogglePanel(() => this.gitPanel?.toggle());
     await this.gitStatus.refresh();
 
     // Initialize Git panel
@@ -680,8 +681,10 @@ class InkwellApp {
       this.elements.emptyState.classList.remove('hidden');
       this.toggleMarkdownPanel(false);
 
-      // Refresh file tree
+      // Refresh file tree and git status
       await this.fileTree?.load();
+      await this.gitStatus?.refresh();
+      await this.gitPanel?.refresh();
       this.setStatus('Opened: ' + path);
     } catch (error) {
       alert('Failed to open directory: ' + (error as Error).message);
@@ -804,6 +807,8 @@ class InkwellApp {
       await api.changeDirectory(path);
       this.hideStartupModal();
       await this.fileTree?.load();
+      await this.gitStatus?.refresh();
+      await this.gitPanel?.refresh();
       this.setStatus('Opened: ' + path);
     } catch (error) {
       alert('Failed to open directory: ' + (error as Error).message);

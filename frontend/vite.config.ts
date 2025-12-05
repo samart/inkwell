@@ -11,6 +11,7 @@ export default defineConfig({
         landing: 'landing.html',
         validate: 'validate-logo.html',
         render: 'render-svg.html',
+        view: 'view-logos.html',
       },
     },
   },
