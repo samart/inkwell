@@ -22,10 +22,11 @@ const (
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
-	Type       AuthType `json:"type"`
-	SSHKeyPath string   `json:"sshKeyPath,omitempty"`
-	Username   string   `json:"username,omitempty"`
-	Password   string   `json:"password,omitempty"` // or token
+	Type          AuthType `json:"type"`
+	SSHKeyPath    string   `json:"sshKeyPath,omitempty"`
+	SSHPassphrase string   `json:"sshPassphrase,omitempty"`
+	Username      string   `json:"username,omitempty"`
+	Password      string   `json:"password,omitempty"` // or token
 }
 
 // DetectAuthType determines the authentication type from a URL
@@ -52,6 +53,9 @@ func DetectAuthType(url string) AuthType {
 func GetAuth(config AuthConfig) (transport.AuthMethod, error) {
 	switch config.Type {
 	case AuthTypeSSH:
+		if config.SSHPassphrase != "" {
+			return getSSHAuthWithPassphrase(config.SSHKeyPath, config.SSHPassphrase)
+		}
 		return getSSHAuth(config.SSHKeyPath)
 	case AuthTypeHTTPS:
 		return getHTTPSAuth(config.Username, config.Password), nil

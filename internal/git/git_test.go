@@ -798,3 +798,357 @@ func TestGetUnstagedFiles(t *testing.T) {
 		t.Errorf("Expected 1 unstaged file, got %d", len(unstaged))
 	}
 }
+
+// TestListBranches tests listing branches
+func TestListBranches(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo with a commit (needed to have a branch)
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create and commit a file
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// List branches
+	branches, err := repo.ListBranches()
+	if err != nil {
+		t.Fatalf("ListBranches failed: %v", err)
+	}
+
+	// Should have at least the main/master branch
+	if len(branches) < 1 {
+		t.Errorf("Expected at least 1 branch, got %d", len(branches))
+	}
+
+	// Find current branch
+	found := false
+	for _, b := range branches {
+		if b.IsCurrent {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected to find a current branch")
+	}
+}
+
+// TestCreateBranch tests creating a new branch
+func TestCreateBranch(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo with a commit
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Create a new branch
+	err = repo.CreateBranch("feature")
+	if err != nil {
+		t.Fatalf("CreateBranch failed: %v", err)
+	}
+
+	// Verify branch exists
+	branches, err := repo.ListBranches()
+	if err != nil {
+		t.Fatalf("ListBranches failed: %v", err)
+	}
+
+	found := false
+	for _, b := range branches {
+		if b.Name == "feature" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected to find 'feature' branch")
+	}
+}
+
+// TestCheckout tests switching branches
+func TestCheckout(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo with a commit
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Create and checkout a new branch
+	err = repo.CreateBranch("feature")
+	if err != nil {
+		t.Fatalf("CreateBranch failed: %v", err)
+	}
+
+	err = repo.Checkout("feature")
+	if err != nil {
+		t.Fatalf("Checkout failed: %v", err)
+	}
+
+	// Verify we're on the new branch
+	currentBranch, err := repo.CurrentBranch()
+	if err != nil {
+		t.Fatalf("CurrentBranch failed: %v", err)
+	}
+
+	if currentBranch != "feature" {
+		t.Errorf("Expected current branch 'feature', got '%s'", currentBranch)
+	}
+}
+
+// TestCheckoutCreate tests creating and switching to a new branch
+func TestCheckoutCreate(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo with a commit
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Create and checkout in one step
+	err = repo.CheckoutCreate("new-feature")
+	if err != nil {
+		t.Fatalf("CheckoutCreate failed: %v", err)
+	}
+
+	// Verify we're on the new branch
+	currentBranch, err := repo.CurrentBranch()
+	if err != nil {
+		t.Fatalf("CurrentBranch failed: %v", err)
+	}
+
+	if currentBranch != "new-feature" {
+		t.Errorf("Expected current branch 'new-feature', got '%s'", currentBranch)
+	}
+}
+
+// TestDeleteBranch tests deleting a branch
+func TestDeleteBranch(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo with a commit
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Create a new branch
+	err = repo.CreateBranch("to-delete")
+	if err != nil {
+		t.Fatalf("CreateBranch failed: %v", err)
+	}
+
+	// Delete the branch
+	err = repo.DeleteBranch("to-delete")
+	if err != nil {
+		t.Fatalf("DeleteBranch failed: %v", err)
+	}
+
+	// Verify branch no longer exists
+	branches, err := repo.ListBranches()
+	if err != nil {
+		t.Fatalf("ListBranches failed: %v", err)
+	}
+
+	for _, b := range branches {
+		if b.Name == "to-delete" {
+			t.Error("Branch 'to-delete' should have been deleted")
+		}
+	}
+}
+
+// TestDeleteCurrentBranchFails tests that deleting current branch fails
+func TestDeleteCurrentBranchFails(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo with a commit
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Try to delete current branch
+	currentBranch, _ := repo.CurrentBranch()
+	err = repo.DeleteBranch(currentBranch)
+	if err == nil {
+		t.Error("Expected error when deleting current branch, got nil")
+	}
+}
+
+// TestRenameBranch tests renaming a branch
+func TestRenameBranch(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo with a commit
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Create a new branch
+	err = repo.CreateBranch("old-name")
+	if err != nil {
+		t.Fatalf("CreateBranch failed: %v", err)
+	}
+
+	// Rename the branch
+	err = repo.RenameBranch("old-name", "new-name")
+	if err != nil {
+		t.Fatalf("RenameBranch failed: %v", err)
+	}
+
+	// Verify old name doesn't exist and new name does
+	branches, err := repo.ListBranches()
+	if err != nil {
+		t.Fatalf("ListBranches failed: %v", err)
+	}
+
+	foundOld := false
+	foundNew := false
+	for _, b := range branches {
+		if b.Name == "old-name" {
+			foundOld = true
+		}
+		if b.Name == "new-name" {
+			foundNew = true
+		}
+	}
+
+	if foundOld {
+		t.Error("Branch 'old-name' should not exist")
+	}
+	if !foundNew {
+		t.Error("Branch 'new-name' should exist")
+	}
+}

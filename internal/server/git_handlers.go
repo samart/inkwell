@@ -399,3 +399,320 @@ func (s *Server) handleGitDiscard(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
+// AuthRequest represents authentication info for remote operations
+type AuthRequest struct {
+	SSHKeyPath    string `json:"sshKeyPath,omitempty"`
+	SSHPassphrase string `json:"sshPassphrase,omitempty"`
+	Username      string `json:"username,omitempty"`
+	Password      string `json:"password,omitempty"`
+}
+
+// handleGitPush pushes commits to the remote
+func (s *Server) handleGitPush(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req AuthRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	// Build auth config if provided
+	var authConfig *git.AuthConfig
+	if req.SSHKeyPath != "" || req.Username != "" {
+		remoteURL := repo.GetRemoteURL()
+		authType := git.DetectAuthType(remoteURL)
+		authConfig = &git.AuthConfig{
+			Type:          authType,
+			SSHKeyPath:    req.SSHKeyPath,
+			SSHPassphrase: req.SSHPassphrase,
+			Username:      req.Username,
+			Password:      req.Password,
+		}
+	}
+
+	result, err := repo.Push(authConfig)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Push failed: "+err.Error())
+		return
+	}
+
+	// Return result and updated status
+	status, _ := repo.Status()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"result": result,
+			"status": status,
+		},
+	})
+}
+
+// handleGitPull pulls commits from the remote
+func (s *Server) handleGitPull(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req AuthRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	// Build auth config if provided
+	var authConfig *git.AuthConfig
+	if req.SSHKeyPath != "" || req.Username != "" {
+		remoteURL := repo.GetRemoteURL()
+		authType := git.DetectAuthType(remoteURL)
+		authConfig = &git.AuthConfig{
+			Type:          authType,
+			SSHKeyPath:    req.SSHKeyPath,
+			SSHPassphrase: req.SSHPassphrase,
+			Username:      req.Username,
+			Password:      req.Password,
+		}
+	}
+
+	result, err := repo.Pull(authConfig)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Pull failed: "+err.Error())
+		return
+	}
+
+	// Return result and updated status
+	status, _ := repo.Status()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"result": result,
+			"status": status,
+		},
+	})
+}
+
+// handleGitFetch fetches updates from the remote without merging
+func (s *Server) handleGitFetch(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req AuthRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	// Build auth config if provided
+	var authConfig *git.AuthConfig
+	if req.SSHKeyPath != "" || req.Username != "" {
+		remoteURL := repo.GetRemoteURL()
+		authType := git.DetectAuthType(remoteURL)
+		authConfig = &git.AuthConfig{
+			Type:          authType,
+			SSHKeyPath:    req.SSHKeyPath,
+			SSHPassphrase: req.SSHPassphrase,
+			Username:      req.Username,
+			Password:      req.Password,
+		}
+	}
+
+	result, err := repo.Fetch(authConfig)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Fetch failed: "+err.Error())
+		return
+	}
+
+	// Return result and updated status
+	status, _ := repo.Status()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"result": result,
+			"status": status,
+		},
+	})
+}
+
+// handleGitBranches lists all branches
+func (s *Server) handleGitBranches(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	branches, err := repo.ListBranches()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to list branches: "+err.Error())
+		return
+	}
+
+	currentBranch, _ := repo.CurrentBranch()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"branches": branches,
+			"current":  currentBranch,
+		},
+	})
+}
+
+// BranchRequest represents a request for branch operations
+type BranchRequest struct {
+	Name    string `json:"name"`
+	NewName string `json:"newName,omitempty"`
+	Create  bool   `json:"create,omitempty"`
+}
+
+// handleGitCheckout switches to a branch
+func (s *Server) handleGitCheckout(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req BranchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "Branch name is required")
+		return
+	}
+
+	var err error
+	if req.Create {
+		err = repo.CheckoutCreate(req.Name)
+	} else {
+		err = repo.Checkout(req.Name)
+	}
+
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Checkout failed: "+err.Error())
+		return
+	}
+
+	// Return updated status
+	status, _ := repo.Status()
+	branches, _ := repo.ListBranches()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"status":   status,
+			"branches": branches,
+		},
+	})
+}
+
+// handleGitCreateBranch creates a new branch
+func (s *Server) handleGitCreateBranch(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req BranchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "Branch name is required")
+		return
+	}
+
+	if err := repo.CreateBranch(req.Name); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to create branch: "+err.Error())
+		return
+	}
+
+	branches, _ := repo.ListBranches()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"branches": branches,
+		},
+	})
+}
+
+// handleGitDeleteBranch deletes a branch
+func (s *Server) handleGitDeleteBranch(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req BranchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "Branch name is required")
+		return
+	}
+
+	if err := repo.DeleteBranch(req.Name); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to delete branch: "+err.Error())
+		return
+	}
+
+	branches, _ := repo.ListBranches()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"branches": branches,
+		},
+	})
+}
+
+// handleGitRenameBranch renames a branch
+func (s *Server) handleGitRenameBranch(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req BranchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Name == "" || req.NewName == "" {
+		writeError(w, http.StatusBadRequest, "Both old and new branch names are required")
+		return
+	}
+
+	if err := repo.RenameBranch(req.Name, req.NewName); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to rename branch: "+err.Error())
+		return
+	}
+
+	branches, _ := repo.ListBranches()
+	status, _ := repo.Status()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"branches": branches,
+			"status":   status,
+		},
+	})
+}

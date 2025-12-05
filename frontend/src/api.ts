@@ -86,6 +86,30 @@ interface GitCommit {
   date: string;
 }
 
+interface GitBranch {
+  name: string;
+  isRemote: boolean;
+  isCurrent: boolean;
+  upstream?: string;
+}
+
+interface PushPullResult {
+  success: boolean;
+  message: string;
+}
+
+interface PullResult extends PushPullResult {
+  fastForward: boolean;
+  newCommits: number;
+}
+
+interface AuthOptions {
+  sshKeyPath?: string;
+  sshPassphrase?: string;
+  username?: string;
+  password?: string;
+}
+
 class Api {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE}${endpoint}`;
@@ -219,7 +243,68 @@ class Api {
       body: JSON.stringify({ files, all }),
     });
   }
+
+  // Push commits to remote
+  async push(auth?: AuthOptions): Promise<{ result: PushPullResult; status: GitStatus }> {
+    return this.request<{ result: PushPullResult; status: GitStatus }>('/git/push', {
+      method: 'POST',
+      body: JSON.stringify(auth || {}),
+    });
+  }
+
+  // Pull commits from remote
+  async pull(auth?: AuthOptions): Promise<{ result: PullResult; status: GitStatus }> {
+    return this.request<{ result: PullResult; status: GitStatus }>('/git/pull', {
+      method: 'POST',
+      body: JSON.stringify(auth || {}),
+    });
+  }
+
+  // Fetch updates from remote
+  async fetch(auth?: AuthOptions): Promise<{ result: PushPullResult; status: GitStatus }> {
+    return this.request<{ result: PushPullResult; status: GitStatus }>('/git/fetch', {
+      method: 'POST',
+      body: JSON.stringify(auth || {}),
+    });
+  }
+
+  // List all branches
+  async listBranches(): Promise<{ branches: GitBranch[]; current: string }> {
+    return this.request<{ branches: GitBranch[]; current: string }>('/git/branches');
+  }
+
+  // Checkout a branch
+  async checkout(name: string, create: boolean = false): Promise<{ status: GitStatus; branches: GitBranch[] }> {
+    return this.request<{ status: GitStatus; branches: GitBranch[] }>('/git/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ name, create }),
+    });
+  }
+
+  // Create a new branch
+  async createBranch(name: string): Promise<{ branches: GitBranch[] }> {
+    return this.request<{ branches: GitBranch[] }>('/git/branches/create', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  // Delete a branch
+  async deleteBranch(name: string): Promise<{ branches: GitBranch[] }> {
+    return this.request<{ branches: GitBranch[] }>('/git/branches/delete', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  // Rename a branch
+  async renameBranch(name: string, newName: string): Promise<{ branches: GitBranch[]; status: GitStatus }> {
+    return this.request<{ branches: GitBranch[]; status: GitStatus }>('/git/branches/rename', {
+      method: 'POST',
+      body: JSON.stringify({ name, newName }),
+    });
+  }
 }
 
 export const api = new Api();
-export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation, GitStatus, GitFileStatus, GitStatusResponse, GitCommit };
+export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation, GitStatus, GitFileStatus, GitStatusResponse, GitCommit, GitBranch, PushPullResult, PullResult, AuthOptions };

@@ -2675,6 +2675,214 @@ body.dark .mermaid-diagram-wrapper:hover,
   }
 }
 
+/* Git Panel Header with Push/Pull */
+.git-panel-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.git-panel-header-row h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.git-remote-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.git-remote-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.git-remote-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.git-remote-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.git-remote-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.git-remote-btn.loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Branch List */
+.git-branch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.git-branch-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.git-branch-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.git-branch-item.current {
+  background-color: var(--bg-tertiary);
+}
+
+.git-branch-icon {
+  color: var(--text-tertiary);
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.git-branch-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.git-branch-item.current .git-branch-icon {
+  color: var(--accent-primary);
+}
+
+.git-branch-item-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-branch-item.remote .git-branch-item-name {
+  color: var(--text-secondary);
+}
+
+.git-branch-item-upstream {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: 8px;
+}
+
+.git-branch-actions {
+  display: none;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.git-branch-item:hover .git-branch-actions {
+  display: flex;
+}
+
+.git-branch-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.git-branch-action:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.git-branch-action.danger:hover {
+  color: var(--error-color);
+}
+
+.git-branch-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Create Branch Button */
+.git-create-branch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 8px;
+  background-color: var(--bg-tertiary);
+  border: 1px dashed var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.git-create-branch:hover {
+  background-color: var(--bg-hover);
+  border-style: solid;
+  color: var(--text-primary);
+}
+
+.git-create-branch svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Git Notifications */
+.git-notification {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  box-shadow: var(--shadow-md);
+  animation: slideUp 0.3s ease;
+  z-index: 1000;
+}
+
+.git-notification-success {
+  background-color: var(--accent-primary);
+  color: #000;
+}
+
+.git-notification-error {
+  background-color: var(--error-color);
+  color: #fff;
+}
+
 /* Utilities */
 .hidden {
   display: none !important;
