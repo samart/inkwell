@@ -55,6 +55,28 @@ interface RecentLocation {
   lastOpened: string;
 }
 
+// Git types
+interface GitFileStatus {
+  path: string;
+  status: 'modified' | 'added' | 'deleted' | 'untracked' | 'conflicted';
+  staged: boolean;
+}
+
+interface GitStatus {
+  branch: string;
+  ahead: number;
+  behind: number;
+  files: GitFileStatus[];
+  hasConflicts: boolean;
+  isClean: boolean;
+  remoteUrl?: string;
+}
+
+interface GitStatusResponse {
+  isRepo: boolean;
+  status?: GitStatus;
+}
+
 class Api {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE}${endpoint}`;
@@ -145,7 +167,18 @@ class Api {
   async getRecents(): Promise<RecentLocation[]> {
     return this.request<RecentLocation[]>('/recents');
   }
+
+  // Git operations
+  async getGitStatus(): Promise<GitStatusResponse> {
+    return this.request<GitStatusResponse>('/git/status');
+  }
+
+  async initGitRepo(): Promise<GitStatusResponse> {
+    return this.request<GitStatusResponse>('/git/init', {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new Api();
-export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation };
+export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation, GitStatus, GitFileStatus, GitStatusResponse };

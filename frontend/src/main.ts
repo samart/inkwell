@@ -5,6 +5,8 @@ import { ws, FileEvent } from './websocket';
 import { FileTree } from './filetree';
 import { MarkdownEditor } from './editor';
 import { MermaidRenderer } from './mermaid-renderer';
+import { GitStatusComponent } from './git-status';
+import { gitCloneDialog } from './git-clone';
 import './styles/main.css';
 
 interface Tab {
@@ -17,6 +19,7 @@ class InkwellApp {
   private fileTree: FileTree | null = null;
   private editor: MarkdownEditor | null = null;
   private mermaidRenderer: MermaidRenderer | null = null;
+  private gitStatus: GitStatusComponent | null = null;
   private tabs: Tab[] = [];
   private activeTab: string | null = null;
   private editors: Map<string, string> = new Map();
@@ -60,6 +63,7 @@ class InkwellApp {
     startupContinue: document.getElementById('startup-continue')!,
     themeSelector: document.getElementById('theme-selector')!,
     closeThemeSelector: document.getElementById('close-theme-selector')!,
+    gitStatusContainer: document.getElementById('git-status')!,
   };
 
   async init(): Promise<void> {
@@ -97,6 +101,12 @@ class InkwellApp {
     // Initialize Mermaid diagram renderer
     this.mermaidRenderer = new MermaidRenderer(this.elements.editorEl);
     this.mermaidRenderer.start();
+
+    // Initialize Git status component
+    this.gitStatus = new GitStatusComponent(this.elements.gitStatusContainer);
+    this.gitStatus.setOnInitRepo(() => this.fileTree?.load());
+    this.gitStatus.setOnCloneRepo(() => this.showCloneDialog());
+    await this.gitStatus.refresh();
 
     // Connect WebSocket
     ws.connect();
@@ -729,6 +739,20 @@ class InkwellApp {
 
   private hideStartupModal(): void {
     this.elements.startupModal.classList.add('hidden');
+  }
+
+  private showCloneDialog(): void {
+    gitCloneDialog.show(async (clonedPath) => {
+      // After successful clone, change to the cloned directory
+      try {
+        await api.changeDirectory(clonedPath);
+        await this.fileTree?.load();
+        await this.gitStatus?.refresh();
+        this.setStatus('Cloned: ' + clonedPath);
+      } catch (error) {
+        alert('Cloned successfully, but failed to open: ' + (error as Error).message);
+      }
+    });
   }
 
   private renderStartupRecents(): void {

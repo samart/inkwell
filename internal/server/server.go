@@ -12,6 +12,7 @@ import (
 
 	"inkwell/internal/config"
 	"inkwell/internal/filesystem"
+	"inkwell/internal/git"
 	"inkwell/internal/recents"
 
 	"github.com/gorilla/mux"
@@ -28,6 +29,7 @@ type Server struct {
 	hub        *Hub
 	webContent embed.FS
 	recents    *recents.Manager
+	git        *git.Manager
 }
 
 // New creates a new server instance
@@ -44,6 +46,11 @@ func New(cfg *config.Config, webContent embed.FS) (*Server, error) {
 		log.Printf("Warning: Failed to initialize recents manager: %v", err)
 	}
 
+	gitManager, err := git.NewManager()
+	if err != nil {
+		log.Printf("Warning: Failed to initialize git manager: %v", err)
+	}
+
 	s := &Server{
 		config:     cfg,
 		fs:         fileSystem,
@@ -51,6 +58,7 @@ func New(cfg *config.Config, webContent embed.FS) (*Server, error) {
 		router:     mux.NewRouter(),
 		webContent: webContent,
 		recents:    recentsManager,
+		git:        gitManager,
 	}
 
 	// Create WebSocket hub
@@ -62,6 +70,15 @@ func New(cfg *config.Config, webContent embed.FS) (*Server, error) {
 	// Add current directory to recents
 	if s.recents != nil {
 		s.recents.Add(cfg.RootDir)
+	}
+
+	// Try to open as git repository
+	if s.git != nil {
+		if _, err := s.git.OpenRepository(cfg.RootDir); err != nil {
+			log.Printf("Note: %s is not a git repository", cfg.RootDir)
+		} else if repo := s.git.CurrentRepository(); repo != nil {
+			log.Printf("Git repository detected: %s (branch: %s)", cfg.RootDir, repo.Branch())
+		}
 	}
 
 	return s, nil
@@ -94,6 +111,14 @@ func (s *Server) setupRoutes() {
 
 	// Recent locations
 	api.HandleFunc("/recents", s.handleGetRecents).Methods("GET")
+
+	// Git operations
+	gitAPI := api.PathPrefix("/git").Subrouter()
+	gitAPI.HandleFunc("/status", s.handleGitStatus).Methods("GET")
+	gitAPI.HandleFunc("/init", s.handleGitInit).Methods("POST")
+	gitAPI.HandleFunc("/clone", s.handleGitClone).Methods("POST")
+	gitAPI.HandleFunc("/repos", s.handleGitListRepos).Methods("GET")
+	gitAPI.HandleFunc("/validate-url", s.handleGitValidateURL).Methods("GET")
 
 	// WebSocket
 	s.router.HandleFunc("/ws", s.hub.HandleWebSocket)

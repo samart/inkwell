@@ -1,7 +1,8 @@
 # Inkwell - Local Markdown IDE
 # Makefile for building, testing, and running
 
-.PHONY: all build build-go frontend run test clean install dev help
+.PHONY: all build build-go frontend run test clean install dev help \
+        vendor-cache frontend-offline vendor-tarballs build-sealed clean-vendor
 
 # Binary name
 BINARY_NAME=inkwell
@@ -139,3 +140,35 @@ build-windows: deps
 	@echo "Building for Windows..."
 	@mkdir -p $(BUILD_DIR)
 	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/inkwell
+
+# Vendoring targets for sealed/offline builds
+## vendor-cache: Cache npm dependencies for offline builds
+vendor-cache:
+	@echo "Caching npm dependencies..."
+	@cd frontend && mkdir -p .npm-cache && npm ci --cache .npm-cache
+	@echo "Dependencies cached in frontend/.npm-cache"
+	@echo "For offline builds, run: make frontend-offline"
+
+## frontend-offline: Build frontend using cached dependencies (no network)
+frontend-offline:
+	@echo "Building frontend offline..."
+	@cd frontend && npm ci --offline --cache .npm-cache && npm run build
+
+## vendor-tarballs: Download all npm dependencies as tarballs
+vendor-tarballs:
+	@echo "Creating dependency tarballs..."
+	@cd frontend && mkdir -p vendor && npm pack --pack-destination ./vendor $$(npm ls --all --json | node -e "const j=require('fs').readFileSync(0,'utf8');const d=JSON.parse(j).dependencies||{};console.log(Object.keys(d).join(' '))" 2>/dev/null || true)
+	@echo "Tarballs saved to frontend/vendor/"
+	@echo "To install from tarballs, update package.json to use file: references"
+
+## build-sealed: Full build for sealed environment (uses cached deps)
+build-sealed: frontend-offline deps
+	@echo "Building $(BINARY_NAME) (sealed)..."
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/inkwell
+
+## clean-vendor: Remove vendored dependencies
+clean-vendor:
+	@echo "Cleaning vendored dependencies..."
+	@rm -rf frontend/.npm-cache
+	@rm -rf frontend/vendor

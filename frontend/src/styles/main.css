@@ -566,6 +566,243 @@ body.dark .btn-new {
   border-color: var(--text-muted);
 }
 
+/* Git Status */
+.git-status-container {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.git-branch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background-color: var(--bg-input);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.git-branch svg {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.git-branch-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-sync {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.git-ahead {
+  color: var(--accent-primary);
+}
+
+.git-behind {
+  color: #f59e0b;
+}
+
+.git-status-indicator {
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+.git-status-indicator.git-dirty {
+  color: #f59e0b;
+}
+
+.git-status-indicator.git-conflict {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.git-init-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px dashed var(--border-color);
+  background-color: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.git-init-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--text-muted);
+  color: var(--text-main);
+}
+
+.git-init-btn svg {
+  opacity: 0.7;
+}
+
+/* Clone Dialog */
+.clone-dialog {
+  width: 480px;
+  max-width: 90vw;
+}
+
+.clone-form {
+  margin-bottom: 16px;
+}
+
+.clone-form .form-group {
+  margin-bottom: 16px;
+}
+
+.clone-form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.clone-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-sidebar);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  font-size: 13px;
+  transition: var(--transition);
+}
+
+.clone-form input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-secondary);
+}
+
+.clone-form .form-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.validation-message {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+.validation-message.valid {
+  color: #10b981;
+}
+
+.validation-message.invalid {
+  color: #ef4444;
+}
+
+.auth-section {
+  padding: 12px;
+  background-color: var(--bg-app);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.auth-type-indicator {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.clone-progress {
+  padding: 16px;
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--accent-primary);
+  width: 30%;
+  animation: progress-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0%, 100% { width: 20%; margin-left: 0; }
+  50% { width: 40%; margin-left: 60%; }
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.error-message {
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.git-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.git-action-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background-color: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: var(--transition);
+}
+
+.git-action-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.git-action-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
 /* Main Content */
 #main-content {
   flex: 1;
