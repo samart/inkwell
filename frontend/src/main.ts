@@ -7,6 +7,7 @@ import { MarkdownEditor } from './editor';
 import { MermaidRenderer } from './mermaid-renderer';
 import { GitStatusComponent } from './git-status';
 import { gitCloneDialog } from './git-clone';
+import { GitPanel } from './git-panel';
 import './styles/main.css';
 
 interface Tab {
@@ -20,6 +21,7 @@ class InkwellApp {
   private editor: MarkdownEditor | null = null;
   private mermaidRenderer: MermaidRenderer | null = null;
   private gitStatus: GitStatusComponent | null = null;
+  private gitPanel: GitPanel | null = null;
   private tabs: Tab[] = [];
   private activeTab: string | null = null;
   private editors: Map<string, string> = new Map();
@@ -64,6 +66,7 @@ class InkwellApp {
     themeSelector: document.getElementById('theme-selector')!,
     closeThemeSelector: document.getElementById('close-theme-selector')!,
     gitStatusContainer: document.getElementById('git-status')!,
+    gitPanelContainer: document.getElementById('git-panel-container')!,
   };
 
   async init(): Promise<void> {
@@ -104,9 +107,18 @@ class InkwellApp {
 
     // Initialize Git status component
     this.gitStatus = new GitStatusComponent(this.elements.gitStatusContainer);
-    this.gitStatus.setOnInitRepo(() => this.fileTree?.load());
+    this.gitStatus.setOnInitRepo(() => this.handleGitRepoChange());
     this.gitStatus.setOnCloneRepo(() => this.showCloneDialog());
     await this.gitStatus.refresh();
+
+    // Initialize Git panel
+    this.gitPanel = new GitPanel(this.elements.gitPanelContainer);
+    this.gitPanel.setOnStatusChange((status) => {
+      if (this.gitStatus && status) {
+        this.gitStatus.update({ isRepo: true, status });
+      }
+    });
+    await this.gitPanel.refresh();
 
     // Connect WebSocket
     ws.connect();
@@ -741,6 +753,11 @@ class InkwellApp {
     this.elements.startupModal.classList.add('hidden');
   }
 
+  private async handleGitRepoChange(): Promise<void> {
+    await this.fileTree?.load();
+    await this.gitPanel?.refresh();
+  }
+
   private showCloneDialog(): void {
     gitCloneDialog.show(async (clonedPath) => {
       // After successful clone, change to the cloned directory
@@ -748,6 +765,7 @@ class InkwellApp {
         await api.changeDirectory(clonedPath);
         await this.fileTree?.load();
         await this.gitStatus?.refresh();
+        await this.gitPanel?.refresh();
         this.setStatus('Cloned: ' + clonedPath);
       } catch (error) {
         alert('Cloned successfully, but failed to open: ' + (error as Error).message);

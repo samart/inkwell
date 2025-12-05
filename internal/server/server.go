@@ -119,6 +119,10 @@ func (s *Server) setupRoutes() {
 	gitAPI.HandleFunc("/clone", s.handleGitClone).Methods("POST")
 	gitAPI.HandleFunc("/repos", s.handleGitListRepos).Methods("GET")
 	gitAPI.HandleFunc("/validate-url", s.handleGitValidateURL).Methods("GET")
+	gitAPI.HandleFunc("/stage", s.handleGitStage).Methods("POST")
+	gitAPI.HandleFunc("/unstage", s.handleGitUnstage).Methods("POST")
+	gitAPI.HandleFunc("/commit", s.handleGitCommit).Methods("POST")
+	gitAPI.HandleFunc("/discard", s.handleGitDiscard).Methods("POST")
 
 	// WebSocket
 	s.router.HandleFunc("/ws", s.hub.HandleWebSocket)

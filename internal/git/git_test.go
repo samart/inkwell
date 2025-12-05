@@ -420,3 +420,381 @@ func TestCloneTimeout(t *testing.T) {
 		t.Error("Expected error due to timeout, got nil")
 	}
 }
+
+// TestStage tests staging files
+func TestStage(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create a test file
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Stage the file
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	// Verify file is staged
+	staged, err := repo.GetStagedFiles()
+	if err != nil {
+		t.Fatalf("GetStagedFiles failed: %v", err)
+	}
+
+	if len(staged) != 1 || staged[0] != "test.txt" {
+		t.Errorf("Expected staged file 'test.txt', got %v", staged)
+	}
+}
+
+// TestStageAll tests staging all files
+func TestStageAll(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create multiple test files
+	for _, name := range []string{"file1.txt", "file2.txt", "file3.txt"} {
+		testFile := filepath.Join(dir, name)
+		if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+	}
+
+	// Stage all
+	err = repo.StageAll()
+	if err != nil {
+		t.Fatalf("StageAll failed: %v", err)
+	}
+
+	// Verify all files are staged
+	staged, err := repo.GetStagedFiles()
+	if err != nil {
+		t.Fatalf("GetStagedFiles failed: %v", err)
+	}
+
+	if len(staged) != 3 {
+		t.Errorf("Expected 3 staged files, got %d", len(staged))
+	}
+}
+
+// TestUnstage tests unstaging files
+func TestUnstage(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create and stage a test file
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	// Verify staged
+	staged, err := repo.GetStagedFiles()
+	if err != nil {
+		t.Fatalf("GetStagedFiles failed: %v", err)
+	}
+	if len(staged) != 1 {
+		t.Fatalf("Expected 1 staged file, got %d", len(staged))
+	}
+
+	// Unstage the file
+	err = repo.Unstage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Unstage failed: %v", err)
+	}
+
+	// Verify unstaged
+	staged, err = repo.GetStagedFiles()
+	if err != nil {
+		t.Fatalf("GetStagedFiles failed: %v", err)
+	}
+	if len(staged) != 0 {
+		t.Errorf("Expected 0 staged files, got %d", len(staged))
+	}
+}
+
+// TestCommit tests creating a commit
+func TestCommit(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create and stage a test file
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	// Commit
+	commit, err := repo.Commit(CommitOptions{
+		Message:     "Test commit",
+		AuthorName:  "Test User",
+		AuthorEmail: "test@example.com",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	if commit == nil {
+		t.Fatal("Commit returned nil")
+	}
+
+	if commit.Message != "Test commit" && commit.Message != "Test commit\n" {
+		t.Errorf("Expected message 'Test commit', got '%s'", commit.Message)
+	}
+
+	if commit.Author != "Test User" {
+		t.Errorf("Expected author 'Test User', got '%s'", commit.Author)
+	}
+
+	if len(commit.Hash) != 40 {
+		t.Errorf("Expected 40-char hash, got %d chars", len(commit.Hash))
+	}
+
+	if len(commit.ShortHash) != 7 {
+		t.Errorf("Expected 7-char short hash, got %d chars", len(commit.ShortHash))
+	}
+}
+
+// TestCommitEmptyMessage tests commit with empty message fails
+func TestCommitEmptyMessage(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create and stage a test file
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	// Try to commit with empty message
+	_, err = repo.Commit(CommitOptions{
+		Message: "",
+	})
+	if err == nil {
+		t.Error("Expected error for empty commit message, got nil")
+	}
+}
+
+// TestCommitNoStagedChanges tests commit with no staged changes fails
+func TestCommitNoStagedChanges(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Try to commit with no staged changes
+	_, err = repo.Commit(CommitOptions{
+		Message: "Test commit",
+	})
+	if err == nil {
+		t.Error("Expected error for no staged changes, got nil")
+	}
+}
+
+// TestDiscard tests discarding changes to a file
+func TestDiscard(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo and create initial commit
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create, stage, and commit a test file
+	testFile := filepath.Join(dir, "test.txt")
+	originalContent := "original content"
+	if err := os.WriteFile(testFile, []byte(originalContent), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Modify the file
+	modifiedContent := "modified content"
+	if err := os.WriteFile(testFile, []byte(modifiedContent), 0644); err != nil {
+		t.Fatalf("Failed to modify test file: %v", err)
+	}
+
+	// Verify file was modified
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if string(content) != modifiedContent {
+		t.Fatalf("File was not modified correctly")
+	}
+
+	// Discard changes
+	err = repo.Discard([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Discard failed: %v", err)
+	}
+
+	// Verify file was restored
+	content, err = os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file after discard: %v", err)
+	}
+	if string(content) != originalContent {
+		t.Errorf("Expected '%s', got '%s'", originalContent, string(content))
+	}
+}
+
+// TestGetStagedFiles tests getting list of staged files
+func TestGetStagedFiles(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Initially no staged files
+	staged, err := repo.GetStagedFiles()
+	if err != nil {
+		t.Fatalf("GetStagedFiles failed: %v", err)
+	}
+	if len(staged) != 0 {
+		t.Errorf("Expected 0 staged files initially, got %d", len(staged))
+	}
+
+	// Create and stage files
+	for _, name := range []string{"a.txt", "b.txt"} {
+		testFile := filepath.Join(dir, name)
+		if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+	}
+
+	err = repo.Stage([]string{"a.txt", "b.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	// Verify staged files
+	staged, err = repo.GetStagedFiles()
+	if err != nil {
+		t.Fatalf("GetStagedFiles failed: %v", err)
+	}
+	if len(staged) != 2 {
+		t.Errorf("Expected 2 staged files, got %d", len(staged))
+	}
+}
+
+// TestGetUnstagedFiles tests getting list of unstaged modified files
+func TestGetUnstagedFiles(t *testing.T) {
+	dir := tempDir(t)
+	defer os.RemoveAll(dir)
+
+	// Initialize repo
+	repo, err := Init(dir)
+	if err != nil {
+		t.Fatalf("Failed to init repo: %v", err)
+	}
+
+	// Create, stage, and commit a file
+	testFile := filepath.Join(dir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("original"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = repo.Stage([]string{"test.txt"})
+	if err != nil {
+		t.Fatalf("Stage failed: %v", err)
+	}
+
+	_, err = repo.Commit(CommitOptions{
+		Message: "Initial commit",
+	})
+	if err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Initially no unstaged changes
+	unstaged, err := repo.GetUnstagedFiles()
+	if err != nil {
+		t.Fatalf("GetUnstagedFiles failed: %v", err)
+	}
+	if len(unstaged) != 0 {
+		t.Errorf("Expected 0 unstaged files initially, got %d", len(unstaged))
+	}
+
+	// Modify the file
+	if err := os.WriteFile(testFile, []byte("modified"), 0644); err != nil {
+		t.Fatalf("Failed to modify test file: %v", err)
+	}
+
+	// Should now have one unstaged file
+	unstaged, err = repo.GetUnstagedFiles()
+	if err != nil {
+		t.Fatalf("GetUnstagedFiles failed: %v", err)
+	}
+	if len(unstaged) != 1 {
+		t.Errorf("Expected 1 unstaged file, got %d", len(unstaged))
+	}
+}

@@ -77,6 +77,15 @@ interface GitStatusResponse {
   status?: GitStatus;
 }
 
+interface GitCommit {
+  hash: string;
+  shortHash: string;
+  message: string;
+  author: string;
+  email: string;
+  date: string;
+}
+
 class Api {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE}${endpoint}`;
@@ -178,7 +187,39 @@ class Api {
       method: 'POST',
     });
   }
+
+  // Stage files for commit
+  async stageFiles(files: string[], all: boolean = false): Promise<{ status: GitStatus }> {
+    return this.request<{ status: GitStatus }>('/git/stage', {
+      method: 'POST',
+      body: JSON.stringify({ files, all }),
+    });
+  }
+
+  // Unstage files
+  async unstageFiles(files: string[], all: boolean = false): Promise<{ status: GitStatus }> {
+    return this.request<{ status: GitStatus }>('/git/unstage', {
+      method: 'POST',
+      body: JSON.stringify({ files, all }),
+    });
+  }
+
+  // Create a commit
+  async commit(message: string, files?: string[]): Promise<{ commit: GitCommit; status: GitStatus }> {
+    return this.request<{ commit: GitCommit; status: GitStatus }>('/git/commit', {
+      method: 'POST',
+      body: JSON.stringify({ message, files }),
+    });
+  }
+
+  // Discard changes to files
+  async discardChanges(files: string[], all: boolean = false): Promise<{ status: GitStatus }> {
+    return this.request<{ status: GitStatus }>('/git/discard', {
+      method: 'POST',
+      body: JSON.stringify({ files, all }),
+    });
+  }
 }
 
 export const api = new Api();
-export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation, GitStatus, GitFileStatus, GitStatusResponse };
+export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation, GitStatus, GitFileStatus, GitStatusResponse, GitCommit };

@@ -199,3 +199,203 @@ func errorString(err error) string {
 	}
 	return ""
 }
+
+// StageRequest represents a request to stage files
+type StageRequest struct {
+	Files []string `json:"files"`
+	All   bool     `json:"all,omitempty"`
+}
+
+// handleGitStage stages files for commit
+func (s *Server) handleGitStage(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req StageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var err error
+	if req.All {
+		err = repo.StageAll()
+	} else if len(req.Files) > 0 {
+		err = repo.Stage(req.Files)
+	} else {
+		writeError(w, http.StatusBadRequest, "No files specified")
+		return
+	}
+
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to stage: "+err.Error())
+		return
+	}
+
+	// Return updated status
+	status, err := repo.Status()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get status: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"status": status,
+		},
+	})
+}
+
+// UnstageRequest represents a request to unstage files
+type UnstageRequest struct {
+	Files []string `json:"files"`
+	All   bool     `json:"all,omitempty"`
+}
+
+// handleGitUnstage unstages files
+func (s *Server) handleGitUnstage(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req UnstageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var err error
+	if req.All {
+		err = repo.UnstageAll()
+	} else if len(req.Files) > 0 {
+		err = repo.Unstage(req.Files)
+	} else {
+		writeError(w, http.StatusBadRequest, "No files specified")
+		return
+	}
+
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to unstage: "+err.Error())
+		return
+	}
+
+	// Return updated status
+	status, err := repo.Status()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get status: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"status": status,
+		},
+	})
+}
+
+// CommitRequest represents a request to create a commit
+type CommitRequest struct {
+	Message     string   `json:"message"`
+	Files       []string `json:"files,omitempty"`
+	AuthorName  string   `json:"authorName,omitempty"`
+	AuthorEmail string   `json:"authorEmail,omitempty"`
+}
+
+// handleGitCommit creates a new commit
+func (s *Server) handleGitCommit(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req CommitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Message == "" {
+		writeError(w, http.StatusBadRequest, "Commit message is required")
+		return
+	}
+
+	commit, err := repo.Commit(git.CommitOptions{
+		Message:     req.Message,
+		Files:       req.Files,
+		AuthorName:  req.AuthorName,
+		AuthorEmail: req.AuthorEmail,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to commit: "+err.Error())
+		return
+	}
+
+	// Return commit info and updated status
+	status, _ := repo.Status()
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"commit": commit,
+			"status": status,
+		},
+	})
+}
+
+// DiscardRequest represents a request to discard changes
+type DiscardRequest struct {
+	Files []string `json:"files"`
+	All   bool     `json:"all,omitempty"`
+}
+
+// handleGitDiscard discards changes to files
+func (s *Server) handleGitDiscard(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req DiscardRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	var err error
+	if req.All {
+		err = repo.DiscardAll()
+	} else if len(req.Files) > 0 {
+		err = repo.Discard(req.Files)
+	} else {
+		writeError(w, http.StatusBadRequest, "No files specified")
+		return
+	}
+
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to discard: "+err.Error())
+		return
+	}
+
+	// Return updated status
+	status, err := repo.Status()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get status: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"status": status,
+		},
+	})
+}
