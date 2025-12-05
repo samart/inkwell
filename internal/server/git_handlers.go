@@ -716,3 +716,243 @@ func (s *Server) handleGitRenameBranch(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
+// handleGitHistory returns commit history
+func (s *Server) handleGitHistory(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	// Parse query params
+	query := r.URL.Query()
+	limit := 50
+	skip := 0
+	filePath := query.Get("path")
+
+	if l := query.Get("limit"); l != "" {
+		if _, err := json.Number(l).Int64(); err == nil {
+			n, _ := json.Number(l).Int64()
+			limit = int(n)
+		}
+	}
+	if s := query.Get("skip"); s != "" {
+		if _, err := json.Number(s).Int64(); err == nil {
+			n, _ := json.Number(s).Int64()
+			skip = int(n)
+		}
+	}
+
+	commits, err := repo.GetHistory(limit, skip, filePath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get history: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"commits": commits,
+		},
+	})
+}
+
+// handleGitCommitDetail returns details for a specific commit
+func (s *Server) handleGitCommitDetail(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	hash := r.URL.Query().Get("hash")
+	if hash == "" {
+		writeError(w, http.StatusBadRequest, "Commit hash is required")
+		return
+	}
+
+	detail, err := repo.GetCommit(hash)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get commit: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: detail,
+	})
+}
+
+// DiffRequest represents a request to get a diff
+type DiffRequest struct {
+	FromHash string `json:"fromHash"`
+	ToHash   string `json:"toHash"`
+	FilePath string `json:"filePath,omitempty"`
+}
+
+// handleGitDiff returns the diff between two commits
+func (s *Server) handleGitDiff(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	// Support both GET with query params and POST with body
+	var fromHash, toHash, filePath string
+
+	if r.Method == "GET" {
+		query := r.URL.Query()
+		fromHash = query.Get("from")
+		toHash = query.Get("to")
+		filePath = query.Get("path")
+	} else {
+		var req DiffRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+		fromHash = req.FromHash
+		toHash = req.ToHash
+		filePath = req.FilePath
+	}
+
+	if fromHash == "" || toHash == "" {
+		writeError(w, http.StatusBadRequest, "Both from and to commit hashes are required")
+		return
+	}
+
+	if filePath != "" {
+		// Get diff for specific file
+		fileDiff, err := repo.GetFileDiff(fromHash, toHash, filePath)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Failed to get file diff: "+err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusOK, APIResponse{
+			Success: true,
+			Data:    fileDiff,
+		})
+		return
+	}
+
+	// Get full diff
+	diff, err := repo.GetDiff(fromHash, toHash)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get diff: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data:    diff,
+	})
+}
+
+// handleGitFileAtCommit returns file content at a specific commit
+func (s *Server) handleGitFileAtCommit(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	hash := r.URL.Query().Get("hash")
+	filePath := r.URL.Query().Get("path")
+
+	if hash == "" || filePath == "" {
+		writeError(w, http.StatusBadRequest, "Both hash and path are required")
+		return
+	}
+
+	content, err := repo.GetFileAtCommit(hash, filePath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get file: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"content": content,
+			"hash":    hash,
+			"path":    filePath,
+		},
+	})
+}
+
+// QuickCommitRequest for staging and committing in one step
+type QuickCommitRequest struct {
+	Files   []string `json:"files"`
+	Message string   `json:"message"`
+	Push    bool     `json:"push,omitempty"`
+}
+
+// handleGitQuickCommit stages files, commits, and optionally pushes
+func (s *Server) handleGitQuickCommit(w http.ResponseWriter, r *http.Request) {
+	repo := s.git.CurrentRepository()
+	if repo == nil {
+		writeError(w, http.StatusBadRequest, "Not a git repository")
+		return
+	}
+
+	var req QuickCommitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Message == "" {
+		writeError(w, http.StatusBadRequest, "Commit message is required")
+		return
+	}
+
+	// Stage files
+	if len(req.Files) > 0 {
+		if err := repo.Stage(req.Files); err != nil {
+			writeError(w, http.StatusInternalServerError, "Failed to stage files: "+err.Error())
+			return
+		}
+	} else {
+		// Stage all modified files
+		if err := repo.StageAll(); err != nil {
+			writeError(w, http.StatusInternalServerError, "Failed to stage files: "+err.Error())
+			return
+		}
+	}
+
+	// Commit
+	commit, err := repo.Commit(git.CommitOptions{
+		Message: req.Message,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to commit: "+err.Error())
+		return
+	}
+
+	response := map[string]interface{}{
+		"commit": commit,
+	}
+
+	// Push if requested
+	if req.Push {
+		pushResult, err := repo.Push(nil)
+		if err != nil {
+			// Commit succeeded but push failed
+			response["pushError"] = err.Error()
+		} else {
+			response["push"] = pushResult
+		}
+	}
+
+	// Return updated status
+	status, _ := repo.Status()
+	response["status"] = status
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data:    response,
+	})
+}

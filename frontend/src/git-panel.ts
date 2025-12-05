@@ -1,5 +1,5 @@
 // Git panel component for managing git operations
-import { api, GitStatus, GitFileStatus, GitCommit, GitBranch } from './api';
+import { api, GitStatus, GitFileStatus, GitCommit, GitBranch, DiffResult, FileDiff } from './api';
 
 type TabType = 'changes' | 'history' | 'branches';
 
@@ -12,6 +12,13 @@ export class GitPanel {
   private onStatusChange: ((status: GitStatus | null) => void) | null = null;
   private isPushing: boolean = false;
   private isPulling: boolean = false;
+
+  // History state
+  private commits: GitCommit[] = [];
+  private selectedCommits: string[] = []; // For diff comparison (max 2)
+  private diffResult: DiffResult | null = null;
+  private isLoadingHistory: boolean = false;
+  private showDiffViewer: boolean = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -55,6 +62,33 @@ export class GitPanel {
     }
   }
 
+  private async loadHistory(): Promise<void> {
+    if (this.isLoadingHistory) return;
+    this.isLoadingHistory = true;
+    this.render();
+
+    try {
+      const result = await api.getHistory(50);
+      this.commits = result.commits;
+    } catch (err) {
+      console.error('Failed to load history:', err);
+      this.commits = [];
+    } finally {
+      this.isLoadingHistory = false;
+      this.render();
+    }
+  }
+
+  private async loadDiff(fromHash: string, toHash: string): Promise<void> {
+    try {
+      this.diffResult = await api.getDiff(fromHash, toHash);
+      this.showDiffViewer = true;
+      this.render();
+    } catch (err) {
+      console.error('Failed to load diff:', err);
+    }
+  }
+
   updateStatus(status: GitStatus | null, isRepo: boolean = true): void {
     this.status = status;
     this.isRepo = isRepo;
@@ -88,7 +122,7 @@ export class GitPanel {
             <button class="git-tab ${this.currentTab === 'changes' ? 'active' : ''}" data-tab="changes">
               Changes ${this.getChangesCount()}
             </button>
-            <button class="git-tab ${this.currentTab === 'history' ? 'active' : ''}" data-tab="history" disabled>
+            <button class="git-tab ${this.currentTab === 'history' ? 'active' : ''}" data-tab="history">
               History
             </button>
             <button class="git-tab ${this.currentTab === 'branches' ? 'active' : ''}" data-tab="branches">
@@ -133,12 +167,143 @@ export class GitPanel {
       case 'changes':
         return this.renderChangesTab();
       case 'history':
-        return '<div class="git-panel-placeholder">History coming soon...</div>';
+        return this.renderHistoryTab();
       case 'branches':
         return this.renderBranchesTab();
       default:
         return '';
     }
+  }
+
+  private renderHistoryTab(): string {
+    if (this.showDiffViewer && this.diffResult) {
+      return this.renderDiffViewer();
+    }
+
+    if (this.isLoadingHistory) {
+      return '<div class="git-panel-loading">Loading history...</div>';
+    }
+
+    if (this.commits.length === 0) {
+      return '<div class="git-panel-empty">No commits yet</div>';
+    }
+
+    const selectedInfo = this.selectedCommits.length > 0
+      ? `<div class="git-history-selection">
+           <span>${this.selectedCommits.length} commit${this.selectedCommits.length > 1 ? 's' : ''} selected</span>
+           ${this.selectedCommits.length === 2
+             ? `<button class="git-compare-btn" data-action="compare-commits">Compare</button>`
+             : ''}
+           <button class="git-clear-selection" data-action="clear-selection">Clear</button>
+         </div>`
+      : '';
+
+    return `
+      ${selectedInfo}
+      <div class="git-history-list">
+        ${this.commits.map(commit => this.renderCommitItem(commit)).join('')}
+      </div>
+    `;
+  }
+
+  private renderCommitItem(commit: GitCommit): string {
+    const isSelected = this.selectedCommits.includes(commit.hash);
+    const date = new Date(commit.date);
+    const relativeTime = this.getRelativeTime(date);
+    const firstLine = commit.message.split('\n')[0];
+
+    return `
+      <div class="git-commit-item ${isSelected ? 'selected' : ''}" data-hash="${commit.hash}">
+        <div class="git-commit-checkbox">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} data-action="select-commit" data-hash="${commit.hash}">
+        </div>
+        <div class="git-commit-info">
+          <div class="git-commit-header">
+            <span class="git-commit-hash">${commit.shortHash}</span>
+            <span class="git-commit-time">${relativeTime}</span>
+          </div>
+          <div class="git-commit-message">${this.escapeHtml(firstLine)}</div>
+          <div class="git-commit-author">${this.escapeHtml(commit.author)}</div>
+        </div>
+        <div class="git-commit-actions">
+          <button class="git-commit-action" data-action="view-commit" data-hash="${commit.hash}" title="View details">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 2c1.981 0 3.671.992 4.933 2.078 1.27 1.091 2.187 2.345 2.637 3.023a1.62 1.62 0 0 1 0 1.798c-.45.678-1.367 1.932-2.637 3.023C11.67 13.008 9.981 14 8 14c-1.981 0-3.671-.992-4.933-2.078C1.797 10.831.88 9.577.43 8.899a1.62 1.62 0 0 1 0-1.798c.45-.678 1.367-1.932 2.637-3.023C4.33 2.992 6.019 2 8 2ZM1.679 7.932a.12.12 0 0 0 0 .136c.411.622 1.241 1.75 2.366 2.717C5.176 11.758 6.527 12.5 8 12.5c1.473 0 2.825-.742 3.955-1.715 1.124-.967 1.954-2.096 2.366-2.717a.12.12 0 0 0 0-.136c-.412-.621-1.242-1.75-2.366-2.717C10.824 4.242 9.473 3.5 8 3.5c-1.473 0-2.824.742-3.955 1.715-1.124.967-1.954 2.096-2.366 2.717ZM8 10a2 2 0 1 1-.001-3.999A2 2 0 0 1 8 10Z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderDiffViewer(): string {
+    if (!this.diffResult) return '';
+
+    return `
+      <div class="git-diff-viewer">
+        <div class="git-diff-header">
+          <button class="git-diff-back" data-action="close-diff">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path fill-rule="evenodd" d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7h7.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z"/>
+            </svg>
+            Back
+          </button>
+          <span class="git-diff-title">
+            ${this.diffResult.fromCommit} → ${this.diffResult.toCommit}
+          </span>
+        </div>
+        <div class="git-diff-files">
+          ${this.diffResult.files.map(file => this.renderFileDiff(file)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderFileDiff(file: FileDiff): string {
+    const stats = file.binary
+      ? '<span class="git-diff-binary">Binary file</span>'
+      : `<span class="git-diff-add">+${file.additions}</span> <span class="git-diff-del">-${file.deletions}</span>`;
+
+    const actionClass = file.action === 'added' ? 'added' : file.action === 'deleted' ? 'deleted' : 'modified';
+
+    return `
+      <div class="git-diff-file">
+        <div class="git-diff-file-header ${actionClass}">
+          <span class="git-diff-file-action">${file.action}</span>
+          <span class="git-diff-file-path">${this.escapeHtml(file.path)}</span>
+          <span class="git-diff-file-stats">${stats}</span>
+        </div>
+        ${!file.binary && file.lines.length > 0 ? `
+          <div class="git-diff-content">
+            ${file.lines.map(line => `
+              <div class="git-diff-line ${line.type}">
+                <span class="git-diff-line-content">${this.escapeHtml(line.content)}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  private getRelativeTime(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  private escapeHtml(str: string): string {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   private renderBranchesTab(): string {
@@ -298,17 +463,40 @@ export class GitPanel {
       `;
     }
 
-    // Commit section (only show if there are staged files)
-    if (stagedFiles.length > 0) {
+    // Commit section - show if there are any changes (staged or unstaged for tracked files)
+    const hasChanges = stagedFiles.length > 0 || unstagedFiles.some(f => f.status !== 'untracked');
+    const hasRemote = this.status?.remoteUrl;
+
+    if (hasChanges) {
       html += `
         <div class="git-commit-section">
           <textarea class="git-commit-message" placeholder="Commit message..." rows="3"></textarea>
-          <button class="git-commit-btn">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M11.93 8.5a4.002 4.002 0 01-7.86 0H.75a.75.75 0 010-1.5h3.32a4.002 4.002 0 017.86 0h3.32a.75.75 0 010 1.5h-3.32zM8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
-            </svg>
-            Commit
-          </button>
+          <div class="git-commit-actions-row">
+            ${stagedFiles.length > 0 ? `
+              <button class="git-commit-btn" data-action="commit">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M11.93 8.5a4.002 4.002 0 01-7.86 0H.75a.75.75 0 010-1.5h3.32a4.002 4.002 0 017.86 0h3.32a.75.75 0 010 1.5h-3.32zM8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
+                </svg>
+                Commit
+              </button>
+            ` : `
+              <button class="git-commit-btn git-commit-btn-secondary" data-action="quick-commit" title="Stage all tracked files and commit">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M11.93 8.5a4.002 4.002 0 01-7.86 0H.75a.75.75 0 010-1.5h3.32a4.002 4.002 0 017.86 0h3.32a.75.75 0 010 1.5h-3.32zM8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
+                </svg>
+                Quick Commit
+              </button>
+            `}
+            ${hasRemote ? `
+              <button class="git-commit-btn git-commit-btn-push" data-action="${stagedFiles.length > 0 ? 'commit-push' : 'quick-commit-push'}" title="Commit and push to remote">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 4a.75.75 0 01.75.75v5.69l1.72-1.72a.75.75 0 111.06 1.06l-3 3a.75.75 0 01-1.06 0l-3-3a.75.75 0 011.06-1.06l1.72 1.72V4.75A.75.75 0 018 4z"/>
+                  <path d="M2 2.75a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z"/>
+                </svg>
+                Commit & Push
+              </button>
+            ` : ''}
+          </div>
         </div>
       `;
     }
@@ -381,8 +569,85 @@ export class GitPanel {
           this.currentTab = tabType;
           if (tabType === 'branches') {
             await this.loadBranches();
+          } else if (tabType === 'history') {
+            await this.loadHistory();
           }
           this.render();
+        }
+      });
+    });
+
+    // History tab actions
+    // Select commit checkboxes
+    this.container.querySelectorAll('[data-action="select-commit"]').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        const hash = target.dataset.hash;
+        if (!hash) return;
+
+        if (target.checked) {
+          // Add to selection (max 2)
+          if (this.selectedCommits.length < 2) {
+            this.selectedCommits.push(hash);
+          } else {
+            // Replace oldest selection
+            this.selectedCommits.shift();
+            this.selectedCommits.push(hash);
+          }
+        } else {
+          // Remove from selection
+          this.selectedCommits = this.selectedCommits.filter(h => h !== hash);
+        }
+        this.render();
+      });
+    });
+
+    // Compare commits button
+    this.container.querySelector('[data-action="compare-commits"]')?.addEventListener('click', async () => {
+      if (this.selectedCommits.length === 2) {
+        // Sort by time - older commit first (fromHash), newer commit second (toHash)
+        const commit1 = this.commits.find(c => c.hash === this.selectedCommits[0]);
+        const commit2 = this.commits.find(c => c.hash === this.selectedCommits[1]);
+        if (commit1 && commit2) {
+          const date1 = new Date(commit1.date).getTime();
+          const date2 = new Date(commit2.date).getTime();
+          const [fromHash, toHash] = date1 < date2
+            ? [this.selectedCommits[0], this.selectedCommits[1]]
+            : [this.selectedCommits[1], this.selectedCommits[0]];
+          await this.loadDiff(fromHash, toHash);
+        }
+      }
+    });
+
+    // Clear selection button
+    this.container.querySelector('[data-action="clear-selection"]')?.addEventListener('click', () => {
+      this.selectedCommits = [];
+      this.render();
+    });
+
+    // Close diff viewer button
+    this.container.querySelector('[data-action="close-diff"]')?.addEventListener('click', () => {
+      this.showDiffViewer = false;
+      this.diffResult = null;
+      this.render();
+    });
+
+    // View commit details button
+    this.container.querySelectorAll('[data-action="view-commit"]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const target = e.currentTarget as HTMLElement;
+        const hash = target.dataset.hash;
+        if (hash) {
+          // Show diff from parent to this commit
+          const commitIndex = this.commits.findIndex(c => c.hash === hash);
+          if (commitIndex >= 0 && commitIndex < this.commits.length - 1) {
+            const parentHash = this.commits[commitIndex + 1].hash;
+            await this.loadDiff(parentHash, hash);
+          } else if (commitIndex === this.commits.length - 1) {
+            // First commit - can't show diff without parent
+            this.showNotification(`First commit: ${this.commits[commitIndex].shortHash}`, 'success');
+          }
         }
       });
     });
@@ -459,13 +724,34 @@ export class GitPanel {
       });
     });
 
-    // Commit
-    this.container.querySelector('.git-commit-btn')?.addEventListener('click', async () => {
-      const textarea = this.container.querySelector('.git-commit-message') as HTMLTextAreaElement;
-      const message = textarea?.value.trim();
-      if (message) {
-        await this.handleCommit(message);
-      }
+    // Commit buttons with different actions
+    this.container.querySelectorAll('.git-commit-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const target = btn as HTMLElement;
+        const action = target.dataset.action;
+        const textarea = this.container.querySelector('.git-commit-message') as HTMLTextAreaElement;
+        const message = textarea?.value.trim();
+
+        if (!message) {
+          alert('Please enter a commit message');
+          return;
+        }
+
+        switch (action) {
+          case 'commit':
+            await this.handleCommit(message);
+            break;
+          case 'commit-push':
+            await this.handleCommitAndPush(message);
+            break;
+          case 'quick-commit':
+            await this.handleQuickCommit(message, false);
+            break;
+          case 'quick-commit-push':
+            await this.handleQuickCommit(message, true);
+            break;
+        }
+      });
     });
 
     // Commit on Ctrl+Enter
@@ -475,6 +761,7 @@ export class GitPanel {
         const textarea = e.target as HTMLTextAreaElement;
         const message = textarea?.value.trim();
         if (message) {
+          // Default to regular commit on Ctrl+Enter
           await this.handleCommit(message);
         }
       }
@@ -584,6 +871,66 @@ export class GitPanel {
     setTimeout(() => successEl.remove(), 3000);
   }
 
+  private async handleCommitAndPush(message: string): Promise<void> {
+    try {
+      // First commit
+      const commitResult = await api.commit(message);
+      this.updateStatus(commitResult.status);
+
+      // Then push
+      const pushResult = await api.push();
+      this.status = pushResult.status;
+      this.render();
+
+      // Clear the commit message
+      const textarea = this.container.querySelector('.git-commit-message') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.value = '';
+      }
+
+      if (pushResult.result.success) {
+        this.showNotification(`Committed ${commitResult.commit.shortHash} and pushed`, 'success');
+      }
+
+      if (this.onStatusChange) {
+        this.onStatusChange(this.status);
+      }
+    } catch (err) {
+      console.error('Failed to commit and push:', err);
+      this.showNotification((err as Error).message, 'error');
+    }
+  }
+
+  private async handleQuickCommit(message: string, push: boolean): Promise<void> {
+    try {
+      const result = await api.quickCommit(message, undefined, push);
+      this.updateStatus(result.status);
+
+      // Clear the commit message
+      const textarea = this.container.querySelector('.git-commit-message') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.value = '';
+      }
+
+      // Show success message
+      if (push && result.push?.success) {
+        this.showNotification(`Committed ${result.commit.shortHash} and pushed`, 'success');
+      } else {
+        this.showCommitSuccess(result.commit);
+      }
+
+      if (result.pushError) {
+        this.showNotification(`Commit succeeded but push failed: ${result.pushError}`, 'error');
+      }
+
+      if (this.onStatusChange) {
+        this.onStatusChange(this.status);
+      }
+    } catch (err) {
+      console.error('Failed to quick commit:', err);
+      this.showNotification((err as Error).message, 'error');
+    }
+  }
 
   private async handlePush(): Promise<void> {
     if (this.isPushing || !this.status) return;

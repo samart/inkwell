@@ -131,6 +131,11 @@ func (s *Server) setupRoutes() {
 	gitAPI.HandleFunc("/branches/create", s.handleGitCreateBranch).Methods("POST")
 	gitAPI.HandleFunc("/branches/delete", s.handleGitDeleteBranch).Methods("POST")
 	gitAPI.HandleFunc("/branches/rename", s.handleGitRenameBranch).Methods("POST")
+	gitAPI.HandleFunc("/history", s.handleGitHistory).Methods("GET")
+	gitAPI.HandleFunc("/commit-detail", s.handleGitCommitDetail).Methods("GET")
+	gitAPI.HandleFunc("/diff", s.handleGitDiff).Methods("GET", "POST")
+	gitAPI.HandleFunc("/file-at-commit", s.handleGitFileAtCommit).Methods("GET")
+	gitAPI.HandleFunc("/quick-commit", s.handleGitQuickCommit).Methods("POST")
 
 	// WebSocket
 	s.router.HandleFunc("/ws", s.hub.HandleWebSocket)

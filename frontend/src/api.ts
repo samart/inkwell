@@ -304,7 +304,89 @@ class Api {
       body: JSON.stringify({ name, newName }),
     });
   }
+
+  // Get commit history
+  async getHistory(limit: number = 50, skip: number = 0, filePath?: string): Promise<{ commits: GitCommit[] }> {
+    let url = `/git/history?limit=${limit}&skip=${skip}`;
+    if (filePath) {
+      url += `&path=${encodeURIComponent(filePath)}`;
+    }
+    return this.request<{ commits: GitCommit[] }>(url);
+  }
+
+  // Get commit details
+  async getCommitDetail(hash: string): Promise<CommitDetail> {
+    return this.request<CommitDetail>(`/git/commit-detail?hash=${encodeURIComponent(hash)}`);
+  }
+
+  // Get diff between two commits
+  async getDiff(fromHash: string, toHash: string, filePath?: string): Promise<DiffResult> {
+    let url = `/git/diff?from=${encodeURIComponent(fromHash)}&to=${encodeURIComponent(toHash)}`;
+    if (filePath) {
+      url += `&path=${encodeURIComponent(filePath)}`;
+    }
+    return this.request<DiffResult>(url);
+  }
+
+  // Get file content at a specific commit
+  async getFileAtCommit(hash: string, filePath: string): Promise<{ content: string; hash: string; path: string }> {
+    return this.request<{ content: string; hash: string; path: string }>(
+      `/git/file-at-commit?hash=${encodeURIComponent(hash)}&path=${encodeURIComponent(filePath)}`
+    );
+  }
+
+  // Quick commit: stage, commit, and optionally push
+  async quickCommit(message: string, files?: string[], push: boolean = false): Promise<QuickCommitResult> {
+    return this.request<QuickCommitResult>('/git/quick-commit', {
+      method: 'POST',
+      body: JSON.stringify({ message, files, push }),
+    });
+  }
+}
+
+// History types
+interface FileChange {
+  path: string;
+  oldPath?: string;
+  action: 'added' | 'modified' | 'deleted' | 'renamed';
+  additions: number;
+  deletions: number;
+}
+
+interface CommitDetail {
+  commit: GitCommit;
+  changes: FileChange[];
+}
+
+interface DiffLine {
+  type: 'context' | 'add' | 'delete' | 'header';
+  content: string;
+  oldLine?: number;
+  newLine?: number;
+}
+
+interface FileDiff {
+  path: string;
+  oldPath?: string;
+  action: string;
+  binary: boolean;
+  lines: DiffLine[];
+  additions: number;
+  deletions: number;
+}
+
+interface DiffResult {
+  fromCommit: string;
+  toCommit: string;
+  files: FileDiff[];
+}
+
+interface QuickCommitResult {
+  commit: GitCommit;
+  status: GitStatus;
+  push?: PushPullResult;
+  pushError?: string;
 }
 
 export const api = new Api();
-export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation, GitStatus, GitFileStatus, GitStatusResponse, GitCommit, GitBranch, PushPullResult, PullResult, AuthOptions };
+export type { FileNode, FileData, ConfigData, DirectoryEntry, DirectoryListResult, FileMetadata, RecentLocation, GitStatus, GitFileStatus, GitStatusResponse, GitCommit, GitBranch, PushPullResult, PullResult, AuthOptions, FileChange, CommitDetail, DiffLine, FileDiff, DiffResult, QuickCommitResult };
