@@ -1,0 +1,204 @@
+/**
+ * Inkwell Shared Editor Styles
+ *
+ * These styles customize the Milkdown/Crepe editor appearance.
+ *
+ * Required CSS Variables (define these in your app):
+ * --font-editor: Font family for editor text
+ * --font-mono: Font family for code
+ * --bg-editor: Editor background color
+ * --bg-sidebar: Sidebar/panel background (used for code blocks)
+ * --text-editor: Main text color
+ * --text-muted: Secondary text color
+ * --accent-primary: Primary accent color (links)
+ * --accent-secondary: Secondary accent color (link hover)
+ * --border-color: Border color
+ */
+
+/* ============================================
+   Milkdown Editor Overrides
+   ============================================ */
+
+.milkdown {
+  background-color: var(--bg-editor) !important;
+}
+
+.milkdown .editor {
+  font-family: var(--font-editor) !important;
+  color: var(--text-editor) !important;
+  background-color: var(--bg-editor) !important;
+  font-size: 18px !important;
+  line-height: 1.58 !important;
+  padding: 24px 0 !important;
+  max-width: 100%;
+  letter-spacing: -0.003em !important;
+  word-break: break-word !important;
+}
+
+/* Headings */
+.milkdown .editor h1,
+.milkdown .editor h2,
+.milkdown .editor h3,
+.milkdown .editor h4,
+.milkdown .editor h5,
+.milkdown .editor h6 {
+  font-family: var(--font-editor) !important;
+  color: var(--text-editor) !important;
+  font-weight: 700 !important;
+  margin-top: 1.4em !important;
+  margin-bottom: 0.4em !important;
+  letter-spacing: -0.02em !important;
+}
+
+.milkdown .editor h1 {
+  font-size: 32px !important;
+  line-height: 1.2 !important;
+  margin-top: 0 !important;
+  font-weight: 700 !important;
+}
+
+.milkdown .editor h2 {
+  font-size: 26px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+  padding-bottom: 0.25em !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.milkdown .editor h3 {
+  font-size: 21px !important;
+  line-height: 1.3 !important;
+  font-weight: 600 !important;
+}
+
+.milkdown .editor h4 {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+}
+
+/* Paragraphs and text */
+.milkdown .editor p {
+  margin-bottom: 1.1em !important;
+}
+
+.milkdown .editor a {
+  color: var(--accent-primary) !important;
+  text-decoration: underline !important;
+}
+
+.milkdown .editor a:hover {
+  color: var(--accent-secondary) !important;
+}
+
+/* Inline code */
+.milkdown .editor code {
+  font-family: var(--font-mono) !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-editor) !important;
+  padding: 2px 4px !important;
+  border-radius: 3px !important;
+  font-size: 0.9em !important;
+}
+
+body.dark .milkdown .editor code,
+[data-theme^="dark"] .milkdown .editor code {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Blockquotes */
+.milkdown .editor blockquote {
+  border-left: 3px solid var(--text-editor) !important;
+  background-color: transparent !important;
+  padding: 0 0 0 16px !important;
+  margin: 1.2em 0 !important;
+  font-style: italic !important;
+  color: var(--text-muted) !important;
+}
+
+/* Lists */
+.milkdown .editor ul,
+.milkdown .editor ol {
+  margin-bottom: 1.1em !important;
+  padding-left: 24px !important;
+}
+
+.milkdown .editor li {
+  margin-bottom: 0.13em !important;
+}
+
+/* Horizontal rules */
+.milkdown .editor hr {
+  border: none !important;
+  border-top: 1px solid var(--border-color) !important;
+  margin: 1.8em auto !important;
+  width: 50% !important;
+}
+
+/* Code blocks */
+.milkdown .editor pre {
+  background-color: var(--bg-sidebar) !important;
+  border-radius: 4px !important;
+  padding: 10px 12px !important;
+  margin: 1em 0 !important;
+  overflow-x: auto !important;
+}
+
+.milkdown .editor pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+/* CodeMirror overrides for code blocks */
+.milkdown .cm-editor {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+.milkdown .cm-editor .cm-scroller {
+  padding: 8px 0 !important;
+}
+
+.milkdown .cm-editor .cm-gutters {
+  background-color: transparent !important;
+  border-right: none !important;
+  padding-right: 8px !important;
+}
+
+.milkdown .cm-editor .cm-lineNumbers .cm-gutterElement {
+  background-color: transparent !important;
+  color: var(--text-muted) !important;
+  padding: 0 4px !important;
+  min-width: auto !important;
+}
+
+.milkdown .cm-editor .cm-content {
+  padding: 0 !important;
+}
+
+.milkdown .cm-editor .cm-line {
+  padding: 0 4px !important;
+}
+
+/* Images */
+.milkdown .editor img {
+  max-width: 100% !important;
+  height: auto !important;
+  margin: 1.2em 0 !important;
+  border-radius: 4px !important;
+}
+
+/* Heading highlight animation (for scroll-to-heading) */
+.heading-highlight {
+  animation: heading-flash 1.5s ease-out;
+}
+
+@keyframes heading-flash {
+  0% {
+    background-color: rgba(59, 130, 246, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}

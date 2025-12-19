@@ -1,17 +1,34 @@
 {
-  "name": "inkwell-frontend",
+  "name": "@inkwell/editor",
   "version": "1.0.0",
+  "description": "Shared Milkdown-based markdown editor for Inkwell",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./styles": {
+      "import": "./dist/styles/index.js",
+      "types": "./dist/styles/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@inkwell/editor": "file:../shared",
     "@milkdown/core": "^7.8.0",
     "@milkdown/crepe": "^7.17.2",
     "@milkdown/ctx": "^7.8.0",
+    "@milkdown/kit": "^7.8.0",
     "@milkdown/plugin-clipboard": "^7.8.0",
     "@milkdown/plugin-history": "^7.8.0",
     "@milkdown/plugin-indent": "^7.8.0",
@@ -26,7 +43,9 @@
     "mermaid": "^11.12.2"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
-    "vite": "^5.0.0"
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "@milkdown/crepe": "^7.17.2"
   }
 }
