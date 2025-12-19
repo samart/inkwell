@@ -1,0 +1,7 @@
+out/
+node_modules/
+*.vsix
+.vscode-test/
+
+# Test files
+Trevor-Samaroo-Resume-2025.md

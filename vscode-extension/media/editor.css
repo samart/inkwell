@@ -1,0 +1,100 @@
+/**
+ * Inkwell Markdown Editor - VSCode Webview Styles
+ *
+ * Uses VSCode CSS variables for theme integration.
+ * The full Milkdown styles will be bundled in Phase 3.
+ */
+
+/* Reset and base styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-editor-background);
+}
+
+/* Editor container */
+#editor {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: 20px;
+}
+
+/* Theme-specific overrides */
+body[data-theme="light"] {
+  /* Light theme uses VSCode defaults */
+}
+
+body[data-theme="dark"] {
+  /* Dark theme uses VSCode defaults */
+}
+
+body[data-theme="sepia"] {
+  --sepia-bg: #f4ecd8;
+  --sepia-fg: #5c4b37;
+  background-color: var(--sepia-bg);
+  color: var(--sepia-fg);
+}
+
+body[data-theme="nord"] {
+  --nord-bg: #2e3440;
+  --nord-fg: #eceff4;
+  background-color: var(--nord-bg);
+  color: var(--nord-fg);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--vscode-scrollbarSlider-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-hoverBackground);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/* Focus styles */
+:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--vscode-editor-selectionBackground);
+}
+
+/* Placeholder text for future Milkdown integration */
+.milkdown-placeholder {
+  color: var(--vscode-input-placeholderForeground);
+  font-style: italic;
+}

@@ -63,13 +63,113 @@ frontend/
     └── mermaid-renderer.ts      # MODIFIED - re-exports from shared
 ```
 
-### Next: Phase 2 - Extension Scaffold
+### Phase 2: Extension Scaffold - COMPLETE
 
-Ready to begin in new session. Tasks:
-1. Create `vscode-extension/` directory
-2. Use Yeoman generator (`yo code`) or manual setup
-3. Set up TypeScript + esbuild bundling
-4. Configure `package.json` with custom editor contribution
+**Date completed:** 2025-12-19
+
+**What was implemented:**
+
+1. **Created `vscode-extension/` directory structure**
+   - `vscode-extension/src/` - TypeScript source files
+   - `vscode-extension/src/webview/` - Webview entry point
+   - `vscode-extension/media/` - CSS and static assets
+   - `vscode-extension/out/` - Compiled output
+
+2. **Created extension manifest** (`vscode-extension/package.json`)
+   - Custom editor contribution for `*.md` files
+   - Configuration for theme selection
+   - esbuild scripts for bundling extension and webview
+   - Dependency on `@inkwell/editor` shared package
+
+3. **Set up TypeScript + esbuild bundling**
+   - `tsconfig.json` - TypeScript configuration
+   - `compile:extension` - Bundles extension entry point
+   - `compile:webview` - Bundles webview code separately
+   - Fast compilation (~10ms total)
+
+4. **Created extension entry point** (`src/extension.ts`)
+   - Activates and registers the custom editor provider
+
+5. **Created MarkdownEditorProvider** (`src/markdownEditorProvider.ts`)
+   - Implements `CustomTextEditorProvider` interface
+   - Handles webview creation and two-way messaging
+   - Image upload handling with workspace assets folder
+   - Document sync for external changes (undo/redo)
+   - Content Security Policy for webview security
+
+6. **Created webview scaffold** (`src/webview/main.ts`)
+   - VSCode API integration for postMessage communication
+   - Placeholder UI (full Milkdown integration in Phase 3)
+   - Basic textarea for testing document sync
+
+7. **Created webview styles** (`media/editor.css`)
+   - VSCode CSS variable integration for theme sync
+   - Theme-specific overrides (light, dark, sepia, nord)
+   - Scrollbar and selection styling
+
+**Files created:**
+```
+vscode-extension/                    # NEW
+├── package.json                     # Extension manifest
+├── package-lock.json
+├── tsconfig.json
+├── .vscodeignore
+├── .gitignore
+├── media/
+│   └── editor.css                   # Webview styles
+├── src/
+│   ├── extension.ts                 # Extension entry point
+│   ├── markdownEditorProvider.ts    # Custom editor provider
+│   └── webview/
+│       └── main.ts                  # Webview entry point
+└── out/                             # Compiled output
+    ├── extension.js
+    └── webview/
+        └── main.js
+```
+
+**Verified:**
+- `npm install` - Dependencies installed
+- `npm run compile` - Extension and webview bundle successfully
+
+### Next: Phase 3 - Core Integration
+
+Ready to begin. This phase integrates the full Milkdown WYSIWYG editor into the webview.
+
+**Tasks:**
+
+1. **Bundle Milkdown + Crepe CSS for webview**
+   - Configure esbuild to bundle CSS from `@milkdown/crepe`
+   - Include all Crepe theme CSS (style, prosemirror, reset, toolbar, etc.)
+   - Include shared editor styles from `@inkwell/editor`
+
+2. **Integrate `@inkwell/editor` MarkdownEditor in webview**
+   - Replace placeholder textarea with `MarkdownEditor` from shared package
+   - Initialize editor with container element
+   - Handle `onImageUpload` callback via VSCode postMessage
+
+3. **Implement full two-way document sync**
+   - `setContent` from extension → editor (external changes, undo/redo)
+   - `onChange` from editor → extension (user edits)
+   - Debounce edits to avoid excessive updates
+   - Handle conflict between simultaneous updates
+
+4. **Configure CSP for Milkdown**
+   - Allow inline styles needed by Milkdown
+   - Allow fonts from extension resources
+   - Allow blob: URLs for Mermaid diagrams
+
+5. **Test in VSCode with F5 debugging**
+   - Create `.vscode/launch.json` for extension debugging
+   - Test basic editing, formatting, lists, code blocks
+   - Test image paste/drop functionality
+   - Test with large markdown files
+
+**Technical considerations:**
+- Milkdown bundle size (~500KB) - may need lazy loading
+- Webview CSP restrictions for inline styles
+- Font loading from extension resources
+- Mermaid diagram rendering in webview context
 
 ---
 

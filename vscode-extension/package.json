@@ -1,0 +1,64 @@
+{
+  "name": "inkwell-markdown",
+  "displayName": "Inkwell Markdown Editor",
+  "description": "WYSIWYG Markdown editing with Milkdown",
+  "version": "0.1.0",
+  "publisher": "inkwell",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "inkwell.markdownEditor",
+        "displayName": "Inkwell Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "configuration": {
+      "title": "Inkwell",
+      "properties": {
+        "inkwell.theme": {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark",
+            "sepia",
+            "nord"
+          ],
+          "default": "light",
+          "description": "Editor color theme"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "npm run compile:extension && npm run compile:webview",
+    "compile:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+    "compile:webview": "esbuild src/webview/main.ts --bundle --outfile=out/webview/main.js --format=iife",
+    "watch": "npm run watch:extension & npm run watch:webview",
+    "watch:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --watch",
+    "watch:webview": "esbuild src/webview/main.ts --bundle --outfile=out/webview/main.js --format=iife --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@inkwell/editor": "file:../shared"
+  }
+}
