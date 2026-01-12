@@ -40,13 +40,24 @@ export class MarkdownEditor {
   private editor: SharedMarkdownEditor;
   private options: EditorOptions;
 
+  private isSaving = false;
+
   constructor(container: HTMLElement, options: EditorOptions = {}) {
     this.options = options;
 
     // Create shared editor with API-based image upload
     const sharedOptions: SharedEditorOptions = {
       onLoad: options.onLoad,
-      onSave: options.onSave,
+      // Intercept onSave to trigger actual auto-save to disk
+      onSave: (path: string) => {
+        // Prevent re-entrant saves (save() calls onSave on success)
+        if (this.isSaving) {
+          this.options.onSave?.(path);
+          return;
+        }
+        // Auto-save: actually persist to disk
+        this.performAutoSave(path);
+      },
       onChange: options.onChange,
       onError: options.onError,
       onStatus: options.onStatus,
@@ -59,6 +70,23 @@ export class MarkdownEditor {
     };
 
     this.editor = new SharedMarkdownEditor(container, sharedOptions);
+  }
+
+  private async performAutoSave(path: string): Promise<void> {
+    if (this.isSaving) return;
+
+    this.isSaving = true;
+    try {
+      const content = this.getContent();
+      await api.updateFile(path, content);
+      this.editor.markSaved();
+      this.options.onSave?.(path);
+    } catch (error) {
+      console.error('[AutoSave] Failed to save:', error);
+      this.options.onError?.('Auto-save failed: ' + (error as Error).message);
+    } finally {
+      this.isSaving = false;
+    }
   }
 
   async init(): Promise<this> {
@@ -90,8 +118,9 @@ export class MarkdownEditor {
 
   async save(): Promise<void> {
     const path = this.editor.getCurrentPath();
-    if (!path) return;
+    if (!path || this.isSaving) return;
 
+    this.isSaving = true;
     try {
       const content = this.getContent();
       await api.updateFile(path, content);
@@ -100,6 +129,8 @@ export class MarkdownEditor {
     } catch (error) {
       console.error('Failed to save:', error);
       this.options.onError?.('Failed to save: ' + (error as Error).message);
+    } finally {
+      this.isSaving = false;
     }
   }
 
