@@ -10,20 +10,22 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	RootDir       string // Directory to serve markdown files from
-	Port          int    // HTTP server port
-	Theme         string // Initial theme (light/dark)
-	NoBrowser     bool   // Don't auto-open browser
-	InitialFile   string // Initial file to open (if specified)
-	AutoSaveDelay int    // Auto-save delay in milliseconds (default: 5000)
+	RootDir              string // Directory to serve markdown files from
+	Port                 int    // HTTP server port
+	Theme                string // Initial theme (light/dark)
+	NoBrowser            bool   // Don't auto-open browser
+	InitialFile          string // Initial file to open (if specified)
+	PeriodicSaveInterval int    // Periodic auto-save interval in milliseconds (default: 300000 = 5 min, 0 = disabled)
+	SaveOnBlur           bool   // Save when window/tab loses focus (default: true)
 }
 
 var (
-	flagsInitialized  bool
-	portFlag          int
-	themeFlag         string
-	noBrowserFlag     bool
-	autoSaveDelayFlag int
+	flagsInitialized         bool
+	portFlag                 int
+	themeFlag                string
+	noBrowserFlag            bool
+	periodicSaveIntervalFlag int
+	saveOnBlurFlag           bool
 )
 
 func initFlags() {
@@ -33,7 +35,8 @@ func initFlags() {
 	flag.IntVar(&portFlag, "port", 0, "HTTP server port (default: random available)")
 	flag.StringVar(&themeFlag, "theme", "light", "Initial theme (light/dark)")
 	flag.BoolVar(&noBrowserFlag, "no-browser", false, "Don't auto-open browser")
-	flag.IntVar(&autoSaveDelayFlag, "auto-save-delay", 5000, "Auto-save delay in milliseconds")
+	flag.IntVar(&periodicSaveIntervalFlag, "periodic-save-interval", 300000, "Periodic auto-save interval in milliseconds (0 = disabled)")
+	flag.BoolVar(&saveOnBlurFlag, "save-on-blur", true, "Save when window/tab loses focus")
 	flagsInitialized = true
 }
 
@@ -47,7 +50,8 @@ func Parse() (*Config, error) {
 	cfg.Port = portFlag
 	cfg.Theme = themeFlag
 	cfg.NoBrowser = noBrowserFlag
-	cfg.AutoSaveDelay = autoSaveDelayFlag
+	cfg.PeriodicSaveInterval = periodicSaveIntervalFlag
+	cfg.SaveOnBlur = saveOnBlurFlag
 
 	// Get the directory/file argument
 	args := flag.Args()

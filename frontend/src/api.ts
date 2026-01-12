@@ -24,7 +24,8 @@ interface ConfigData {
   theme: string;
   rootDir: string;
   initialFile: string;
-  autoSaveDelay: number;
+  periodicSaveInterval: number;
+  saveOnBlur: boolean;
 }
 
 interface ImageUploadResult {

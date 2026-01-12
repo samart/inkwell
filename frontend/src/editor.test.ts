@@ -2,10 +2,11 @@
  * Tests for the MarkdownEditor auto-save functionality.
  *
  * These tests verify that:
- * 1. Auto-save triggers API calls when debounce fires
- * 2. Errors are properly propagated to the error callback
- * 3. Save state (isSaving) prevents re-entrant saves
- * 4. Both manual save and auto-save work correctly
+ * 1. Focus-loss (visibility/blur) triggers saves
+ * 2. Periodic saves trigger at the configured interval
+ * 3. Throttling prevents rapid saves
+ * 4. Errors are properly propagated to the error callback
+ * 5. Save state (isSaving) prevents re-entrant saves
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -142,61 +143,222 @@ describe('Auto-save behavior', () => {
     });
   });
 
-  describe('debounce behavior simulation', () => {
-    it('should debounce multiple rapid changes', () => {
-      let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  describe('focus-loss save behavior', () => {
+    it('should save when visibility changes to hidden', () => {
+      let isDirty = true;
       const notifySave = vi.fn();
 
-      // Simulate handleChange
-      function handleChange() {
-        if (saveTimeout) {
-          clearTimeout(saveTimeout);
-        }
-        saveTimeout = setTimeout(() => {
+      // Simulate visibilitychange handler
+      function handleVisibilityChange() {
+        // Note: document.hidden would be checked, simulated here as true
+        const isHidden = true;
+        if (isHidden && isDirty) {
           notifySave();
-        }, 1000);
+        }
       }
 
-      // Rapid changes
-      handleChange();
-      handleChange();
-      handleChange();
-      handleChange();
+      handleVisibilityChange();
 
-      // Before debounce timeout
-      vi.advanceTimersByTime(500);
-      expect(notifySave).not.toHaveBeenCalled();
-
-      // More changes reset the timer
-      handleChange();
-      vi.advanceTimersByTime(500);
-      expect(notifySave).not.toHaveBeenCalled();
-
-      // After debounce timeout
-      vi.advanceTimersByTime(500);
       expect(notifySave).toHaveBeenCalledTimes(1);
     });
 
-    it('should trigger save after 1 second of inactivity', () => {
-      let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+    it('should not save on visibility change if not dirty', () => {
+      let isDirty = false;
       const notifySave = vi.fn();
 
-      function handleChange() {
-        if (saveTimeout) {
-          clearTimeout(saveTimeout);
-        }
-        saveTimeout = setTimeout(() => {
+      function handleVisibilityChange() {
+        const isHidden = true;
+        if (isHidden && isDirty) {
           notifySave();
-        }, 1000);
+        }
       }
 
-      handleChange();
+      handleVisibilityChange();
 
-      vi.advanceTimersByTime(999);
+      expect(notifySave).not.toHaveBeenCalled();
+    });
+
+    it('should save when window loses focus (blur)', () => {
+      let isDirty = true;
+      const notifySave = vi.fn();
+
+      function handleBlur() {
+        if (isDirty) {
+          notifySave();
+        }
+      }
+
+      handleBlur();
+
+      expect(notifySave).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not save on blur if not dirty', () => {
+      let isDirty = false;
+      const notifySave = vi.fn();
+
+      function handleBlur() {
+        if (isDirty) {
+          notifySave();
+        }
+      }
+
+      handleBlur();
+
+      expect(notifySave).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('periodic save behavior', () => {
+    it('should save periodically at configured interval', () => {
+      let isDirty = true;
+      const notifySave = vi.fn();
+      const periodicInterval = 300000; // 5 minutes
+
+      // Simulate setInterval setup
+      const intervalId = setInterval(() => {
+        if (isDirty) {
+          notifySave();
+        }
+      }, periodicInterval);
+
+      // Should not save immediately
       expect(notifySave).not.toHaveBeenCalled();
 
-      vi.advanceTimersByTime(1);
+      // Advance by 5 minutes
+      vi.advanceTimersByTime(300000);
       expect(notifySave).toHaveBeenCalledTimes(1);
+
+      // Advance by another 5 minutes
+      vi.advanceTimersByTime(300000);
+      expect(notifySave).toHaveBeenCalledTimes(2);
+
+      clearInterval(intervalId);
+    });
+
+    it('should not save periodically if not dirty', () => {
+      let isDirty = false;
+      const notifySave = vi.fn();
+      const periodicInterval = 300000;
+
+      const intervalId = setInterval(() => {
+        if (isDirty) {
+          notifySave();
+        }
+      }, periodicInterval);
+
+      vi.advanceTimersByTime(600000); // 10 minutes
+
+      expect(notifySave).not.toHaveBeenCalled();
+
+      clearInterval(intervalId);
+    });
+
+    it('should respect custom periodic interval', () => {
+      let isDirty = true;
+      const notifySave = vi.fn();
+      const customInterval = 60000; // 1 minute
+
+      const intervalId = setInterval(() => {
+        if (isDirty) {
+          notifySave();
+        }
+      }, customInterval);
+
+      vi.advanceTimersByTime(60000);
+      expect(notifySave).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(60000);
+      expect(notifySave).toHaveBeenCalledTimes(2);
+
+      clearInterval(intervalId);
+    });
+
+    it('should not start periodic saves if interval is 0', () => {
+      let isDirty = true;
+      const notifySave = vi.fn();
+      const periodicInterval = 0;
+
+      let intervalId: ReturnType<typeof setInterval> | null = null;
+      if (periodicInterval > 0) {
+        intervalId = setInterval(() => {
+          if (isDirty) {
+            notifySave();
+          }
+        }, periodicInterval);
+      }
+
+      vi.advanceTimersByTime(600000);
+
+      expect(notifySave).not.toHaveBeenCalled();
+      expect(intervalId).toBeNull();
+    });
+  });
+
+  describe('throttling behavior', () => {
+    it('should throttle rapid saves', () => {
+      let lastSaveTime = 0;
+      let isDirty = true;
+      const minSaveInterval = 1000;
+      const actualSave = vi.fn();
+
+      function notifySave() {
+        if (!isDirty) return;
+
+        const now = Date.now();
+        if (now - lastSaveTime < minSaveInterval) {
+          return;
+        }
+        lastSaveTime = now;
+        isDirty = false;
+        actualSave();
+      }
+
+      // First save should work
+      notifySave();
+      expect(actualSave).toHaveBeenCalledTimes(1);
+
+      // Reset dirty flag
+      isDirty = true;
+
+      // Immediate second save should be throttled
+      notifySave();
+      expect(actualSave).toHaveBeenCalledTimes(1);
+
+      // Advance time past throttle
+      vi.advanceTimersByTime(1000);
+
+      // Now save should work
+      isDirty = true;
+      notifySave();
+      expect(actualSave).toHaveBeenCalledTimes(2);
+    });
+
+    it('should prevent blur and visibility from double-saving', () => {
+      let lastSaveTime = 0;
+      let isDirty = true;
+      const minSaveInterval = 1000;
+      const actualSave = vi.fn();
+
+      function notifySave() {
+        if (!isDirty) return;
+
+        const now = Date.now();
+        if (now - lastSaveTime < minSaveInterval) {
+          return;
+        }
+        lastSaveTime = now;
+        isDirty = false;
+        actualSave();
+      }
+
+      // Simulate both blur and visibilitychange firing
+      notifySave(); // visibility change
+      isDirty = true; // Pretend something resets dirty
+      notifySave(); // blur
+
+      // Only one save should occur due to throttling
+      expect(actualSave).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -261,7 +423,6 @@ describe('Auto-save behavior', () => {
       mockUpdateFile.mockRejectedValue(new Error(errorMessage));
 
       let displayedError = '';
-      const isSavingRef = { value: false };
 
       // Simulate performAutoSave
       try {

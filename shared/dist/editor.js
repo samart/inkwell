@@ -24,9 +24,22 @@ export class MarkdownEditor {
         this.crepe = null;
         this.currentPath = null;
         this.isDirty = false;
-        this.saveTimeout = null;
         this.lastContent = '';
         this.initialized = false;
+        // Auto-save state
+        this.periodicSaveTimer = null;
+        this.lastSaveTime = 0;
+        // Arrow functions to preserve 'this' binding for event listeners
+        this.handleVisibilityChange = () => {
+            if (document.hidden && this.isDirty) {
+                this.notifySave();
+            }
+        };
+        this.handleBlur = () => {
+            if (this.isDirty) {
+                this.notifySave();
+            }
+        };
         this.container = container;
         this.options = options;
     }
@@ -38,6 +51,20 @@ export class MarkdownEditor {
         // Setup drop handler for images
         this.container.addEventListener('drop', this.handleDrop.bind(this));
         this.container.addEventListener('dragover', (e) => e.preventDefault());
+        // Setup auto-save: focus loss handlers
+        if (this.options.saveOnBlur !== false) {
+            document.addEventListener('visibilitychange', this.handleVisibilityChange);
+            window.addEventListener('blur', this.handleBlur);
+        }
+        // Setup auto-save: periodic timer
+        const periodicInterval = this.options.periodicSaveInterval ?? 300000; // 5 minutes default
+        if (periodicInterval > 0) {
+            this.periodicSaveTimer = window.setInterval(() => {
+                if (this.isDirty) {
+                    this.notifySave();
+                }
+            }, periodicInterval);
+        }
         return this;
     }
     async createEditor(initialContent) {
@@ -192,21 +219,23 @@ export class MarkdownEditor {
             return;
         this.isDirty = true;
         this.options.onChange?.(this.currentPath, content, true);
-        // Debounced auto-save notification
-        if (this.saveTimeout) {
-            clearTimeout(this.saveTimeout);
-        }
-        this.saveTimeout = window.setTimeout(() => {
-            this.notifySave();
-        }, 1000);
+        // Auto-save is triggered by focus loss or periodic timer, not on every change
     }
     /**
      * Notify that content should be saved.
-     * The actual save implementation is handled by the consumer via onChange.
+     * The actual save implementation is handled by the consumer via onSave.
+     * Includes throttling to prevent rapid saves from overlapping events.
      */
     notifySave() {
         if (!this.currentPath || !this.isDirty)
             return;
+        // Throttle: don't save more frequently than minSaveInterval
+        const now = Date.now();
+        const minInterval = this.options.minSaveInterval ?? 1000;
+        if (now - this.lastSaveTime < minInterval) {
+            return;
+        }
+        this.lastSaveTime = now;
         const content = this.getContent();
         this.isDirty = false;
         this.options.onSave?.(this.currentPath);
@@ -272,9 +301,14 @@ export class MarkdownEditor {
         proseMirror?.focus();
     }
     destroy() {
-        if (this.saveTimeout) {
-            clearTimeout(this.saveTimeout);
+        // Clean up periodic save timer
+        if (this.periodicSaveTimer) {
+            clearInterval(this.periodicSaveTimer);
+            this.periodicSaveTimer = null;
         }
+        // Clean up focus-loss event listeners
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        window.removeEventListener('blur', this.handleBlur);
         this.crepe?.destroy();
     }
     getWordCount() {

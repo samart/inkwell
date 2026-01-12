@@ -70,15 +70,19 @@ class InkwellApp {
   };
 
   async init(): Promise<void> {
-    // Load config
-    let autoSaveDelay = 5000; // default
+    // Load config - auto-save options
+    let periodicSaveInterval = 300000; // default 5 minutes
+    let saveOnBlur = true; // default
     try {
       const config = await api.getConfig();
       if (config.theme === 'dark') {
         this.setTheme('dark');
       }
-      if (config.autoSaveDelay) {
-        autoSaveDelay = config.autoSaveDelay;
+      if (config.periodicSaveInterval !== undefined) {
+        periodicSaveInterval = config.periodicSaveInterval;
+      }
+      if (config.saveOnBlur !== undefined) {
+        saveOnBlur = config.saveOnBlur;
       }
     } catch (e) {
       console.error('Failed to load config:', e);
@@ -101,7 +105,8 @@ class InkwellApp {
       onChange: (path, _content, dirty) => this.handleEditorChange(path, dirty),
       onError: (msg) => this.setStatus(msg),
       onStatus: (msg) => this.setStatus(msg),
-      autoSaveDelay,
+      periodicSaveInterval,
+      saveOnBlur,
     });
 
     await this.editor.init();

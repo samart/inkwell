@@ -27,6 +27,23 @@ export interface EditorOptions {
     onImageUpload?: ImageUploadHandler;
     /** Placeholder text shown in empty editor */
     placeholder?: string;
+    /**
+     * Periodic auto-save interval in milliseconds.
+     * Saves every N ms if there are unsaved changes.
+     * Set to 0 to disable. Default: 300000 (5 minutes)
+     */
+    periodicSaveInterval?: number;
+    /**
+     * Save when window/tab loses focus.
+     * Default: true
+     */
+    saveOnBlur?: boolean;
+    /**
+     * Minimum time between saves in milliseconds.
+     * Prevents rapid saves from overlapping events.
+     * Default: 1000 (1 second)
+     */
+    minSaveInterval?: number;
 }
 export declare class MarkdownEditor {
     private container;
@@ -34,11 +51,14 @@ export declare class MarkdownEditor {
     private crepe;
     private currentPath;
     private isDirty;
-    private saveTimeout;
     private lastContent;
     private initialized;
+    private periodicSaveTimer;
+    private lastSaveTime;
     constructor(container: HTMLElement, options?: EditorOptions);
     init(): Promise<this>;
+    private handleVisibilityChange;
+    private handleBlur;
     private createEditor;
     /**
      * Load content from a path. The actual file reading should be done by the consumer.
@@ -50,7 +70,8 @@ export declare class MarkdownEditor {
     private handleChange;
     /**
      * Notify that content should be saved.
-     * The actual save implementation is handled by the consumer via onChange.
+     * The actual save implementation is handled by the consumer via onSave.
+     * Includes throttling to prevent rapid saves from overlapping events.
      */
     notifySave(): void;
     /**

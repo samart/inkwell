@@ -253,10 +253,11 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, APIResponse{
 		Success: true,
 		Data: map[string]interface{}{
-			"theme":         s.config.Theme,
-			"rootDir":       s.config.RootDir,
-			"initialFile":   s.config.InitialFile,
-			"autoSaveDelay": s.config.AutoSaveDelay,
+			"theme":                s.config.Theme,
+			"rootDir":              s.config.RootDir,
+			"initialFile":          s.config.InitialFile,
+			"periodicSaveInterval": s.config.PeriodicSaveInterval,
+			"saveOnBlur":           s.config.SaveOnBlur,
 		},
 	})
 }

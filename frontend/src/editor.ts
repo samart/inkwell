@@ -30,8 +30,12 @@ interface EditorOptions {
   onChange?: (path: string, content: string, dirty: boolean) => void;
   onError?: (message: string) => void;
   onStatus?: (message: string) => void;
-  /** Auto-save delay in milliseconds. Default: 5000 (5 seconds) */
-  autoSaveDelay?: number;
+  /** Periodic auto-save interval in ms. Default: 300000 (5 min). Set 0 to disable. */
+  periodicSaveInterval?: number;
+  /** Save when window/tab loses focus. Default: true */
+  saveOnBlur?: boolean;
+  /** Min time between saves in ms. Default: 1000 (1 sec) */
+  minSaveInterval?: number;
 }
 
 /**
@@ -63,7 +67,10 @@ export class MarkdownEditor {
       onChange: options.onChange,
       onError: options.onError,
       onStatus: options.onStatus,
-      autoSaveDelay: options.autoSaveDelay,
+      // Auto-save options
+      periodicSaveInterval: options.periodicSaveInterval,
+      saveOnBlur: options.saveOnBlur,
+      minSaveInterval: options.minSaveInterval,
       onImageUpload: async (file: File) => {
         // Use the API to upload the image
         const result = await api.uploadImage(file);

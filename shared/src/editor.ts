@@ -62,10 +62,22 @@ export interface EditorOptions {
   /** Placeholder text shown in empty editor */
   placeholder?: string;
   /**
-   * Auto-save delay in milliseconds. After this period of inactivity,
-   * the file will be automatically saved. Default: 5000 (5 seconds)
+   * Periodic auto-save interval in milliseconds.
+   * Saves every N ms if there are unsaved changes.
+   * Set to 0 to disable. Default: 300000 (5 minutes)
    */
-  autoSaveDelay?: number;
+  periodicSaveInterval?: number;
+  /**
+   * Save when window/tab loses focus.
+   * Default: true
+   */
+  saveOnBlur?: boolean;
+  /**
+   * Minimum time between saves in milliseconds.
+   * Prevents rapid saves from overlapping events.
+   * Default: 1000 (1 second)
+   */
+  minSaveInterval?: number;
 }
 
 export class MarkdownEditor {
@@ -74,9 +86,12 @@ export class MarkdownEditor {
   private crepe: Crepe | null = null;
   private currentPath: string | null = null;
   private isDirty = false;
-  private saveTimeout: number | null = null;
   private lastContent = '';
   private initialized = false;
+
+  // Auto-save state
+  private periodicSaveTimer: number | null = null;
+  private lastSaveTime = 0;
 
   constructor(container: HTMLElement, options: EditorOptions = {}) {
     this.container = container;
@@ -94,8 +109,37 @@ export class MarkdownEditor {
     this.container.addEventListener('drop', this.handleDrop.bind(this));
     this.container.addEventListener('dragover', (e) => e.preventDefault());
 
+    // Setup auto-save: focus loss handlers
+    if (this.options.saveOnBlur !== false) {
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
+      window.addEventListener('blur', this.handleBlur);
+    }
+
+    // Setup auto-save: periodic timer
+    const periodicInterval = this.options.periodicSaveInterval ?? 300000; // 5 minutes default
+    if (periodicInterval > 0) {
+      this.periodicSaveTimer = window.setInterval(() => {
+        if (this.isDirty) {
+          this.notifySave();
+        }
+      }, periodicInterval);
+    }
+
     return this;
   }
+
+  // Arrow functions to preserve 'this' binding for event listeners
+  private handleVisibilityChange = (): void => {
+    if (document.hidden && this.isDirty) {
+      this.notifySave();
+    }
+  };
+
+  private handleBlur = (): void => {
+    if (this.isDirty) {
+      this.notifySave();
+    }
+  };
 
   private async createEditor(initialContent: string): Promise<void> {
     // Destroy existing editor
@@ -263,24 +307,24 @@ export class MarkdownEditor {
 
     this.isDirty = true;
     this.options.onChange?.(this.currentPath, content, true);
-
-    // Debounced auto-save notification
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
-    const delay = this.options.autoSaveDelay ?? 5000;
-    this.saveTimeout = window.setTimeout(() => {
-      this.notifySave();
-    }, delay);
+    // Auto-save is triggered by focus loss or periodic timer, not on every change
   }
 
   /**
    * Notify that content should be saved.
-   * The actual save implementation is handled by the consumer via onChange.
+   * The actual save implementation is handled by the consumer via onSave.
+   * Includes throttling to prevent rapid saves from overlapping events.
    */
   notifySave(): void {
     if (!this.currentPath || !this.isDirty) return;
+
+    // Throttle: don't save more frequently than minSaveInterval
+    const now = Date.now();
+    const minInterval = this.options.minSaveInterval ?? 1000;
+    if (now - this.lastSaveTime < minInterval) {
+      return;
+    }
+    this.lastSaveTime = now;
 
     const content = this.getContent();
     this.isDirty = false;
@@ -354,9 +398,16 @@ export class MarkdownEditor {
   }
 
   destroy(): void {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
+    // Clean up periodic save timer
+    if (this.periodicSaveTimer) {
+      clearInterval(this.periodicSaveTimer);
+      this.periodicSaveTimer = null;
     }
+
+    // Clean up focus-loss event listeners
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    window.removeEventListener('blur', this.handleBlur);
+
     this.crepe?.destroy();
   }
 
