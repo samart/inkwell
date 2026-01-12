@@ -30,6 +30,8 @@ interface EditorOptions {
   onChange?: (path: string, content: string, dirty: boolean) => void;
   onError?: (message: string) => void;
   onStatus?: (message: string) => void;
+  /** Auto-save delay in milliseconds. Default: 5000 (5 seconds) */
+  autoSaveDelay?: number;
 }
 
 /**
@@ -61,6 +63,7 @@ export class MarkdownEditor {
       onChange: options.onChange,
       onError: options.onError,
       onStatus: options.onStatus,
+      autoSaveDelay: options.autoSaveDelay,
       onImageUpload: async (file: File) => {
         // Use the API to upload the image
         const result = await api.uploadImage(file);

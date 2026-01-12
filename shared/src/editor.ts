@@ -61,6 +61,11 @@ export interface EditorOptions {
   onImageUpload?: ImageUploadHandler;
   /** Placeholder text shown in empty editor */
   placeholder?: string;
+  /**
+   * Auto-save delay in milliseconds. After this period of inactivity,
+   * the file will be automatically saved. Default: 5000 (5 seconds)
+   */
+  autoSaveDelay?: number;
 }
 
 export class MarkdownEditor {
@@ -264,9 +269,10 @@ export class MarkdownEditor {
       clearTimeout(this.saveTimeout);
     }
 
+    const delay = this.options.autoSaveDelay ?? 5000;
     this.saveTimeout = window.setTimeout(() => {
       this.notifySave();
-    }, 1000);
+    }, delay);
   }
 
   /**

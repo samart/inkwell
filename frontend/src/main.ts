@@ -71,10 +71,14 @@ class InkwellApp {
 
   async init(): Promise<void> {
     // Load config
+    let autoSaveDelay = 5000; // default
     try {
       const config = await api.getConfig();
       if (config.theme === 'dark') {
         this.setTheme('dark');
+      }
+      if (config.autoSaveDelay) {
+        autoSaveDelay = config.autoSaveDelay;
       }
     } catch (e) {
       console.error('Failed to load config:', e);
@@ -97,6 +101,7 @@ class InkwellApp {
       onChange: (path, _content, dirty) => this.handleEditorChange(path, dirty),
       onError: (msg) => this.setStatus(msg),
       onStatus: (msg) => this.setStatus(msg),
+      autoSaveDelay,
     });
 
     await this.editor.init();

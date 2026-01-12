@@ -10,18 +10,20 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	RootDir     string // Directory to serve markdown files from
-	Port        int    // HTTP server port
-	Theme       string // Initial theme (light/dark)
-	NoBrowser   bool   // Don't auto-open browser
-	InitialFile string // Initial file to open (if specified)
+	RootDir       string // Directory to serve markdown files from
+	Port          int    // HTTP server port
+	Theme         string // Initial theme (light/dark)
+	NoBrowser     bool   // Don't auto-open browser
+	InitialFile   string // Initial file to open (if specified)
+	AutoSaveDelay int    // Auto-save delay in milliseconds (default: 5000)
 }
 
 var (
-	flagsInitialized bool
-	portFlag         int
-	themeFlag        string
-	noBrowserFlag    bool
+	flagsInitialized  bool
+	portFlag          int
+	themeFlag         string
+	noBrowserFlag     bool
+	autoSaveDelayFlag int
 )
 
 func initFlags() {
@@ -31,6 +33,7 @@ func initFlags() {
 	flag.IntVar(&portFlag, "port", 0, "HTTP server port (default: random available)")
 	flag.StringVar(&themeFlag, "theme", "light", "Initial theme (light/dark)")
 	flag.BoolVar(&noBrowserFlag, "no-browser", false, "Don't auto-open browser")
+	flag.IntVar(&autoSaveDelayFlag, "auto-save-delay", 5000, "Auto-save delay in milliseconds")
 	flagsInitialized = true
 }
 
@@ -44,6 +47,7 @@ func Parse() (*Config, error) {
 	cfg.Port = portFlag
 	cfg.Theme = themeFlag
 	cfg.NoBrowser = noBrowserFlag
+	cfg.AutoSaveDelay = autoSaveDelayFlag
 
 	// Get the directory/file argument
 	args := flag.Args()
