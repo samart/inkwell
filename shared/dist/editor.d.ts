@@ -55,6 +55,7 @@ export declare class MarkdownEditor {
     private initialized;
     private periodicSaveTimer;
     private lastSaveTime;
+    private lastSavedContent;
     constructor(container: HTMLElement, options?: EditorOptions);
     init(): Promise<this>;
     private handleVisibilityChange;
@@ -72,10 +73,12 @@ export declare class MarkdownEditor {
      * Notify that content should be saved.
      * The actual save implementation is handled by the consumer via onSave.
      * Includes throttling to prevent rapid saves from overlapping events.
+     * Skips save if content hasn't actually changed from last saved state.
      */
     notifySave(): void;
     /**
      * Mark the editor as saved (reset dirty state).
+     * Called by consumers after successfully persisting content.
      */
     markSaved(): void;
     private handlePaste;

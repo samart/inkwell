@@ -92,6 +92,7 @@ export class MarkdownEditor {
   // Auto-save state
   private periodicSaveTimer: number | null = null;
   private lastSaveTime = 0;
+  private lastSavedContent = ''; // Content at last save, to avoid redundant saves
 
   constructor(container: HTMLElement, options: EditorOptions = {}) {
     this.container = container;
@@ -282,6 +283,7 @@ export class MarkdownEditor {
   async loadContent(path: string, content: string): Promise<void> {
     this.currentPath = path;
     this.isDirty = false;
+    this.lastSavedContent = content; // Track what's on disk
     await this.setContent(content);
     this.options.onLoad?.(path);
   }
@@ -314,9 +316,18 @@ export class MarkdownEditor {
    * Notify that content should be saved.
    * The actual save implementation is handled by the consumer via onSave.
    * Includes throttling to prevent rapid saves from overlapping events.
+   * Skips save if content hasn't actually changed from last saved state.
    */
   notifySave(): void {
     if (!this.currentPath || !this.isDirty) return;
+
+    const content = this.getContent();
+
+    // Skip if content is identical to what's already saved
+    if (content === this.lastSavedContent) {
+      this.isDirty = false;
+      return;
+    }
 
     // Throttle: don't save more frequently than minSaveInterval
     const now = Date.now();
@@ -326,19 +337,21 @@ export class MarkdownEditor {
     }
     this.lastSaveTime = now;
 
-    const content = this.getContent();
     this.isDirty = false;
+    this.lastSavedContent = content; // Update saved content reference
     this.options.onSave?.(this.currentPath);
     this.options.onChange?.(this.currentPath, content, false);
   }
 
   /**
    * Mark the editor as saved (reset dirty state).
+   * Called by consumers after successfully persisting content.
    */
   markSaved(): void {
     this.isDirty = false;
+    this.lastSavedContent = this.getContent(); // Update saved content reference
     if (this.currentPath) {
-      this.options.onChange?.(this.currentPath, this.getContent(), false);
+      this.options.onChange?.(this.currentPath, this.lastSavedContent, false);
     }
   }
 

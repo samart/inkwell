@@ -295,6 +295,90 @@ describe('Auto-save behavior', () => {
     });
   });
 
+  describe('content comparison to avoid redundant saves', () => {
+    it('should skip save if content matches last saved content', () => {
+      let lastSavedContent = '# Hello';
+      let isDirty = true;
+      const actualSave = vi.fn();
+
+      function notifySave(currentContent: string) {
+        if (!isDirty) return;
+
+        // Skip if content is identical to what's already saved
+        if (currentContent === lastSavedContent) {
+          isDirty = false;
+          return;
+        }
+
+        isDirty = false;
+        lastSavedContent = currentContent;
+        actualSave(currentContent);
+      }
+
+      // Content matches saved - should NOT save
+      notifySave('# Hello');
+      expect(actualSave).not.toHaveBeenCalled();
+      expect(isDirty).toBe(false);
+    });
+
+    it('should save if content differs from last saved content', () => {
+      let lastSavedContent = '# Hello';
+      let isDirty = true;
+      const actualSave = vi.fn();
+
+      function notifySave(currentContent: string) {
+        if (!isDirty) return;
+
+        if (currentContent === lastSavedContent) {
+          isDirty = false;
+          return;
+        }
+
+        isDirty = false;
+        lastSavedContent = currentContent;
+        actualSave(currentContent);
+      }
+
+      // Content differs - should save
+      notifySave('# Hello World');
+      expect(actualSave).toHaveBeenCalledWith('# Hello World');
+      expect(lastSavedContent).toBe('# Hello World');
+    });
+
+    it('should not save after undo back to saved state', () => {
+      let lastSavedContent = '# Original';
+      let isDirty = false;
+      const actualSave = vi.fn();
+
+      function handleChange() {
+        isDirty = true;
+      }
+
+      function notifySave(currentContent: string) {
+        if (!isDirty) return;
+
+        if (currentContent === lastSavedContent) {
+          isDirty = false;
+          return;
+        }
+
+        isDirty = false;
+        lastSavedContent = currentContent;
+        actualSave(currentContent);
+      }
+
+      // User types something
+      handleChange();
+      expect(isDirty).toBe(true);
+
+      // User undoes back to original
+      notifySave('# Original');
+
+      // Should not save since content matches
+      expect(actualSave).not.toHaveBeenCalled();
+    });
+  });
+
   describe('throttling behavior', () => {
     it('should throttle rapid saves', () => {
       let lastSaveTime = 0;

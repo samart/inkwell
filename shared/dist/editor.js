@@ -29,6 +29,7 @@ export class MarkdownEditor {
         // Auto-save state
         this.periodicSaveTimer = null;
         this.lastSaveTime = 0;
+        this.lastSavedContent = ''; // Content at last save, to avoid redundant saves
         // Arrow functions to preserve 'this' binding for event listeners
         this.handleVisibilityChange = () => {
             if (document.hidden && this.isDirty) {
@@ -198,6 +199,7 @@ export class MarkdownEditor {
     async loadContent(path, content) {
         this.currentPath = path;
         this.isDirty = false;
+        this.lastSavedContent = content; // Track what's on disk
         await this.setContent(content);
         this.options.onLoad?.(path);
     }
@@ -225,10 +227,17 @@ export class MarkdownEditor {
      * Notify that content should be saved.
      * The actual save implementation is handled by the consumer via onSave.
      * Includes throttling to prevent rapid saves from overlapping events.
+     * Skips save if content hasn't actually changed from last saved state.
      */
     notifySave() {
         if (!this.currentPath || !this.isDirty)
             return;
+        const content = this.getContent();
+        // Skip if content is identical to what's already saved
+        if (content === this.lastSavedContent) {
+            this.isDirty = false;
+            return;
+        }
         // Throttle: don't save more frequently than minSaveInterval
         const now = Date.now();
         const minInterval = this.options.minSaveInterval ?? 1000;
@@ -236,18 +245,20 @@ export class MarkdownEditor {
             return;
         }
         this.lastSaveTime = now;
-        const content = this.getContent();
         this.isDirty = false;
+        this.lastSavedContent = content; // Update saved content reference
         this.options.onSave?.(this.currentPath);
         this.options.onChange?.(this.currentPath, content, false);
     }
     /**
      * Mark the editor as saved (reset dirty state).
+     * Called by consumers after successfully persisting content.
      */
     markSaved() {
         this.isDirty = false;
+        this.lastSavedContent = this.getContent(); // Update saved content reference
         if (this.currentPath) {
-            this.options.onChange?.(this.currentPath, this.getContent(), false);
+            this.options.onChange?.(this.currentPath, this.lastSavedContent, false);
         }
     }
     async handlePaste(event) {
