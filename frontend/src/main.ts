@@ -93,6 +93,7 @@ class InkwellApp {
       onFileSelect: (path) => this.selectFile(path),
       onFileOpen: (path) => this.openFile(path),
       onFileDeleted: (path) => this.closeTab(path),
+      onFileCopied: (path) => this.openFile(path),
       onHeadingClick: (path, line) => this.scrollToHeading(path, line),
     });
 
@@ -423,7 +424,90 @@ class InkwellApp {
           this.switchToTab((el as HTMLElement).dataset.path!);
         }
       });
+
+      el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const path = (el as HTMLElement).dataset.path!;
+        this.showTabContextMenu(e as MouseEvent, path);
+      });
     });
+  }
+
+  private showTabContextMenu(event: MouseEvent, path: string): void {
+    const existing = document.querySelector('.tab-context-menu');
+    if (existing) {
+      existing.remove();
+    }
+
+    const menu = document.createElement('div');
+    menu.className = 'tab-context-menu';
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+
+    menu.innerHTML = `
+      <div class="tab-context-menu-item" data-action="copy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </div>
+      <div class="tab-context-menu-item" data-action="close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        Close
+      </div>
+    `;
+
+    menu.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const action = target.closest('[data-action]')?.getAttribute('data-action');
+      if (!action) return;
+
+      menu.remove();
+
+      switch (action) {
+        case 'copy':
+          {
+            // Generate suggested filename with -copy suffix
+            const lastSlash = path.lastIndexOf('/');
+            const dir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : '';
+            const fname = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+            const ext = fname.lastIndexOf('.');
+            const baseName = ext >= 0 ? fname.substring(0, ext) : fname;
+            const extension = ext >= 0 ? fname.substring(ext) : '.md';
+            const suggestedName = `${baseName}-copy${extension}`;
+
+            const newName = prompt('Enter name for the copy:', suggestedName);
+            if (newName && newName.trim()) {
+              const destPath = dir + newName.trim();
+              try {
+                const result = await api.copyFile(path, destPath);
+                await this.fileTree?.refresh();
+                await this.openFile(result.path);
+              } catch (error) {
+                alert('Failed to copy: ' + (error as Error).message);
+              }
+            }
+          }
+          break;
+        case 'close':
+          this.closeTab(path);
+          break;
+      }
+    });
+
+    document.body.appendChild(menu);
+
+    const closeMenu = (e: MouseEvent) => {
+      if (!menu.contains(e.target as Node)) {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeMenu), 0);
   }
 
   private handleEditorChange(path: string, dirty: boolean): void {

@@ -12,6 +12,7 @@ interface FileTreeOptions {
   onFileSelect?: (path: string) => void;
   onFileOpen?: (path: string) => void;
   onFileDeleted?: (path: string) => void;
+  onFileCopied?: (path: string) => void;
   onRename?: (path: string) => void;
   onHeadingClick?: (path: string, line: number) => void;
 }
@@ -481,6 +482,14 @@ export class FileTree {
         </svg>
         Open
       </div>`;
+
+      html += `<div class="tree-context-menu-item" data-action="copy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </div>`;
     }
 
     html += `<div class="tree-context-menu-item" data-action="rename">
@@ -512,6 +521,30 @@ export class FileTree {
       switch (action) {
         case 'open':
           this.options.onFileOpen?.(node.path);
+          break;
+        case 'copy':
+          {
+            // Generate suggested filename with -copy suffix
+            const lastSlash = node.path.lastIndexOf('/');
+            const dir = lastSlash >= 0 ? node.path.substring(0, lastSlash + 1) : '';
+            const filename = lastSlash >= 0 ? node.path.substring(lastSlash + 1) : node.path;
+            const ext = filename.lastIndexOf('.');
+            const baseName = ext >= 0 ? filename.substring(0, ext) : filename;
+            const extension = ext >= 0 ? filename.substring(ext) : '.md';
+            const suggestedName = `${baseName}-copy${extension}`;
+
+            const newName = prompt('Enter name for the copy:', suggestedName);
+            if (newName && newName.trim()) {
+              const destPath = dir + newName.trim();
+              try {
+                const result = await api.copyFile(node.path, destPath);
+                await this.refresh();
+                this.options.onFileCopied?.(result.path);
+              } catch (error) {
+                alert('Failed to copy: ' + (error as Error).message);
+              }
+            }
+          }
           break;
         case 'rename':
           this.options.onRename?.(node.path);

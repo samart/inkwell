@@ -96,6 +96,7 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/files", s.handleCreateFile).Methods("POST")
 	api.HandleFunc("/files", s.handleUpdateFile).Methods("PUT")
 	api.HandleFunc("/files", s.handleDeleteFile).Methods("DELETE")
+	api.HandleFunc("/files/copy", s.handleCopyFile).Methods("POST")
 	api.HandleFunc("/files/metadata", s.handleGetFileMetadata).Methods("GET")
 
 	// Image operations

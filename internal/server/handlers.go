@@ -27,6 +27,12 @@ type FileRequest struct {
 	Content string `json:"content"`
 }
 
+// CopyFileRequest represents a file copy request
+type CopyFileRequest struct {
+	SourcePath string `json:"sourcePath"`
+	DestPath   string `json:"destPath"`
+}
+
 // handleGetTree returns the file tree
 func (s *Server) handleGetTree(w http.ResponseWriter, r *http.Request) {
 	tree, err := s.fs.GetTree()
@@ -144,6 +150,49 @@ func (s *Server) handleDeleteFile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleCopyFile copies a file to a new location
+func (s *Server) handleCopyFile(w http.ResponseWriter, r *http.Request) {
+	var req CopyFileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.SourcePath == "" {
+		writeError(w, http.StatusBadRequest, "Source path is required")
+		return
+	}
+
+	if req.DestPath == "" {
+		writeError(w, http.StatusBadRequest, "Destination path is required")
+		return
+	}
+
+	// Ensure destination is a markdown file
+	if !strings.HasSuffix(strings.ToLower(req.DestPath), ".md") {
+		req.DestPath += ".md"
+	}
+
+	// Read source file content
+	content, err := s.fs.ReadFile(req.SourcePath)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "Source file not found: "+err.Error())
+		return
+	}
+
+	// Create the copy
+	if err := s.fs.CreateFile(req.DestPath, content); err != nil {
+		writeError(w, http.StatusConflict, "Failed to create copy: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, APIResponse{
+		Success: true,
+		Data: map[string]string{
+			"path": req.DestPath,
+		},
+	})
+}
 
 // FileMetadata contains file information for tooltips
 type FileMetadata struct {

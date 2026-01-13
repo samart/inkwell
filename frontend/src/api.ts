@@ -160,6 +160,13 @@ class Api {
     });
   }
 
+  async copyFile(sourcePath: string, destPath: string): Promise<{ path: string }> {
+    return this.request<{ path: string }>('/files/copy', {
+      method: 'POST',
+      body: JSON.stringify({ sourcePath, destPath }),
+    });
+  }
+
   async uploadImage(file: File): Promise<ImageUploadResult> {
     const formData = new FormData();
     formData.append('image', file);
